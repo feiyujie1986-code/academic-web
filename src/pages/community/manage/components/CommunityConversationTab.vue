@@ -1,0 +1,799 @@
+<script lang="ts" setup>
+import type { ConversationMemberCandidate, ConversationModel } from "@/api/im/conversation"
+// 群组头像
+import conversationsIcon from "@@/assets/images/conversations-icon.png"
+// 状态图标
+import qiyongzhongIcon from "@@/assets/images/qiyongzhong.png"
+import yiguidangIcon from "@@/assets/images/yiguidang.png"
+import { formatDateTime } from "@@/utils/datetime"
+import { ElMessage, ElMessageBox } from "element-plus"
+
+import { computed, onMounted, reactive, ref, watch } from "vue"
+import { CommunityType } from "@/api/im/community"
+import {
+  addConversationMembersApi,
+  ConversationType,
+  createConversationApi,
+  deleteConversationApi,
+  getConversationMembersApi,
+  getConversationsApi,
+  removeConversationMemberApi,
+  updateConversationApi
+} from "@/api/im/conversation"
+
+interface Props {
+  communityId: number
+  communityName?: string
+  communityType?: CommunityType
+}
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  (e: "updateCount", count: number): void
+  (e: "refreshCommunities"): void
+}>()
+
+const loading = ref(false)
+const conversations = ref<ConversationModel[]>([])
+const total = ref(0)
+
+// 是否可以管理群组（员工社区和合作社区可以创建/编辑/归档群组）
+const canManageGroup = computed(() =>
+  props.communityType === CommunityType.Employee || props.communityType === CommunityType.Cooperation
+)
+
+// 筛选状态：active | archived
+const filterStatus = ref("active")
+
+// 获取群组列表
+async function fetchConversations() {
+  if (!props.communityId) return
+  loading.value = true
+  try {
+    // 根据筛选状态设置 status 参数：进行中=1，已归档=0
+    const status = filterStatus.value === "active" ? 1 : 0
+    const res = await getConversationsApi({
+      communityId: props.communityId,
+      status,
+      page: 1,
+      pageSize: 100
+    })
+    if (res.code === 0 && res.data) {
+      conversations.value = res.data.list
+      total.value = res.data.total
+      // 只有进行中状态才更新父组件数量
+      if (filterStatus.value === "active") {
+        emit("updateCount", total.value)
+      }
+    }
+  } catch (err) {
+    console.error("获取群组列表失败", err)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 切换筛选状态
+function handleFilterChange(status: "active" | "archived") {
+  if (filterStatus.value === status) return
+  filterStatus.value = status
+  fetchConversations()
+}
+
+// ========== 创建/编辑群组对话框 ==========
+const dialogVisible = ref(false)
+const dialogLoading = ref(false)
+const dialogMode = ref<"create" | "edit">("create")
+const editingConversationId = ref<number | null>(null)
+const dialogForm = reactive({
+  name: "",
+  description: ""
+})
+
+// 选择群成员相关
+const candidatesLoading = ref(false)
+const searchKeyword = ref("")
+const candidates = ref<ConversationMemberCandidate[]>([])
+const selectedMembers = ref<ConversationMemberCandidate[]>([])
+// 原有群成员（编辑时用于对比，包含 memberId）
+const originalMembers = ref<{ memberId: number, userId: number }[]>([])
+
+// 打开创建对话框
+function openCreateDialog() {
+  dialogMode.value = "create"
+  editingConversationId.value = null
+  dialogForm.name = ""
+  dialogForm.description = ""
+  searchKeyword.value = ""
+  selectedMembers.value = []
+  originalMembers.value = []
+  dialogVisible.value = true
+  fetchCandidates()
+}
+
+// 打开编辑对话框
+async function openEditDialog(conversation: ConversationModel) {
+  dialogMode.value = "edit"
+  editingConversationId.value = conversation.id
+  dialogForm.name = conversation.name
+  dialogForm.description = conversation.announcement || ""
+  searchKeyword.value = ""
+  originalMembers.value = []
+  selectedMembers.value = []
+  dialogVisible.value = true
+
+  // 获取社区成员列表
+  await fetchCandidates()
+
+  // 获取当前群成员并预选
+  await fetchExistingMembers(conversation.id)
+}
+
+// 获取社区成员列表
+async function fetchCandidates() {
+  candidatesLoading.value = true
+  try {
+    // 使用社区成员接口
+    const { getCommunityMembersApi } = await import("@/api/im/community")
+    const res = await getCommunityMembersApi(props.communityId, {
+      keyword: searchKeyword.value,
+      page: 1,
+      pageSize: 100
+    })
+    if (res.code === 0 && res.data) {
+      candidates.value = res.data.list.map(m => ({
+        userId: m.userId,
+        nickname: m.nickname || m.userName,
+        avatar: m.userAvatar,
+        email: "",
+        userRole: m.userRole,
+        roleName: m.userRoleName
+      }))
+      // 自动选中受保护角色（super_admin、admin）
+      candidates.value.forEach((candidate) => {
+        if (isProtectedRole(candidate.userRole) && !selectedMembers.value.some(u => u.userId === candidate.userId)) {
+          selectedMembers.value.push(candidate)
+        }
+      })
+    }
+  } catch (err) {
+    console.error("获取社区成员列表失败", err)
+  } finally {
+    candidatesLoading.value = false
+  }
+}
+
+// 获取已有群成员（编辑时）
+async function fetchExistingMembers(conversationId: number) {
+  try {
+    const res = await getConversationMembersApi(conversationId, {
+      page: 1,
+      pageSize: 100
+    })
+    if (res.code === 0 && res.data) {
+      // 存储原有成员（包含 memberId，用于删除）
+      originalMembers.value = res.data.list.map(m => ({
+        memberId: m.id,
+        userId: m.userId
+      }))
+      // 将已有成员添加到已选列表
+      const existingUserIds = res.data.list.map(m => m.userId)
+      candidates.value.forEach((candidate) => {
+        if (existingUserIds.includes(candidate.userId) && !selectedMembers.value.some(s => s.userId === candidate.userId)) {
+          selectedMembers.value.push(candidate)
+        }
+      })
+    }
+  } catch (err) {
+    console.error("获取群成员失败", err)
+  }
+}
+
+// 搜索成员
+function handleSearch() {
+  fetchCandidates()
+}
+
+// 判断是否为受保护角色（超级管理员和管理员不可取消）
+function isProtectedRole(userRole: string): boolean {
+  return userRole === "super_admin" || userRole === "admin"
+}
+
+// 检查是否已选中
+function isSelected(userId: number): boolean {
+  return selectedMembers.value.some(u => u.userId === userId)
+}
+
+// 切换选中状态
+function toggleSelect(candidate: ConversationMemberCandidate) {
+  // 受保护角色不允许取消选中
+  if (isProtectedRole(candidate.userRole)) return
+
+  const index = selectedMembers.value.findIndex(u => u.userId === candidate.userId)
+  if (index > -1) {
+    selectedMembers.value.splice(index, 1)
+  } else {
+    selectedMembers.value.push(candidate)
+  }
+}
+
+// 移除已选人员
+function removeSelected(userId: number) {
+  const member = selectedMembers.value.find(u => u.userId === userId)
+  // 受保护角色不允许移除
+  if (member && isProtectedRole(member.userRole)) return
+
+  const index = selectedMembers.value.findIndex(u => u.userId === userId)
+  if (index > -1) {
+    selectedMembers.value.splice(index, 1)
+  }
+}
+
+// 全部移除（保留受保护角色）
+function clearSelected() {
+  selectedMembers.value = selectedMembers.value.filter(u => isProtectedRole(u.userRole))
+}
+
+// 默认头像
+function getAvatarUrl(avatar: string): string {
+  return avatar || "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png"
+}
+
+// 角色标签样式映射（浅色背景 + 彩色文字）
+function getRoleTagStyle(roleName: string): Record<string, string> {
+  const styleMap: Record<string, { bg: string, color: string }> = {
+    管理员: { bg: "#FFF3E0", color: "#FF9500" },
+    大使长: { bg: "#F3E8FF", color: "#B385DB" },
+    大使: { bg: "#E8F5E9", color: "#4CAF50" },
+    教师: { bg: "#E3F2FD", color: "#409EFF" }
+  }
+  const style = styleMap[roleName] || { bg: "#F5F5F5", color: "#909399" }
+  return {
+    backgroundColor: style.bg,
+    color: style.color,
+    borderColor: style.bg
+  }
+}
+
+// 保存群组
+async function handleSave() {
+  if (!dialogForm.name.trim()) {
+    ElMessage.warning("请输入群组名称")
+    return
+  }
+
+  dialogLoading.value = true
+  try {
+    if (dialogMode.value === "create") {
+      // 创建群组
+      const res = await createConversationApi({
+        communityId: props.communityId,
+        name: dialogForm.name.trim(),
+        memberUserIds: selectedMembers.value.map(m => m.userId)
+      })
+      if (res.code === 0) {
+        ElMessage.success("创建成功")
+        dialogVisible.value = false
+        fetchConversations()
+        emit("refreshCommunities")
+      }
+    } else {
+      // 编辑群组
+      if (!editingConversationId.value) return
+
+      const selectedUserIds = selectedMembers.value.map(m => m.userId)
+      const originalUserIds = originalMembers.value.map(m => m.userId)
+
+      // 找出需要移除的成员（原有成员中不在 selectedMembers 里的）
+      const membersToRemove = originalMembers.value.filter(m => !selectedUserIds.includes(m.userId))
+
+      // 找出需要添加的成员（selectedMembers 中不在原有成员里的）
+      const membersToAdd = selectedMembers.value.filter(m => !originalUserIds.includes(m.userId))
+
+      // 移除成员
+      for (const member of membersToRemove) {
+        await removeConversationMemberApi(editingConversationId.value, member.memberId)
+      }
+
+      // 添加新成员
+      if (membersToAdd.length > 0) {
+        await addConversationMembersApi(editingConversationId.value, membersToAdd.map(m => m.userId))
+      }
+
+      // 更新群组信息
+      const res = await updateConversationApi(editingConversationId.value, {
+        name: dialogForm.name.trim(),
+        announcement: dialogForm.description.trim() || undefined
+      })
+      if (res.code === 0) {
+        ElMessage.success("保存成功")
+        dialogVisible.value = false
+        fetchConversations()
+      }
+    }
+  } catch (err) {
+    console.error("保存群组失败", err)
+  } finally {
+    dialogLoading.value = false
+  }
+}
+
+// 归档群组（调用删除接口）
+async function handleArchive(conversation: ConversationModel) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要归档群组"${conversation.name}"吗？`,
+      "归档确认",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning"
+      }
+    )
+    const res = await deleteConversationApi(conversation.id)
+    if (res.code === 0) {
+      ElMessage.success("归档成功")
+      fetchConversations()
+      emit("refreshCommunities")
+    }
+  } catch (err) {
+    if (err !== "cancel") {
+      console.error("归档群组失败", err)
+    }
+  }
+}
+
+onMounted(() => {
+  fetchConversations()
+})
+
+watch(() => props.communityId, () => {
+  fetchConversations()
+})
+</script>
+
+<template>
+  <div v-loading="loading" class="conversation-tab">
+    <!-- 头部区域 -->
+    <div class="tab-header">
+      <!-- 筛选标签 -->
+      <div class="filter-tabs">
+        <div
+          class="filter-tab"
+          :class="{ active: filterStatus === 'active' }"
+          @click="handleFilterChange('active')"
+        >
+          进行中
+        </div>
+        <div
+          class="filter-tab"
+          :class="{ active: filterStatus === 'archived' }"
+          @click="handleFilterChange('archived')"
+        >
+          已归档
+        </div>
+      </div>
+
+      <!-- 创建群组按钮（员工社区和合作社区显示） -->
+      <el-button v-if="canManageGroup" type="primary" @click="openCreateDialog">
+        创建群组
+      </el-button>
+    </div>
+
+    <!-- 提示信息（仅培训社区显示） -->
+    <div v-if="!canManageGroup" class="tip-info">
+      <el-icon><InfoFilled /></el-icon>
+      <span>培训社区群组由系统根据班级创建，无法手动添加</span>
+    </div>
+
+    <!-- 群组列表 -->
+    <div class="conversation-list">
+      <div
+        v-for="conversation in conversations"
+        :key="conversation.id"
+        class="conversation-item"
+      >
+        <!-- 群头像 -->
+        <img :src="conversationsIcon" class="group-avatar">
+
+        <!-- 群组信息 -->
+        <div class="conversation-info">
+          <div class="conversation-name">
+            <span class="name">{{ conversation.name }}</span>
+            <img
+              :src="conversation.status === 1 ? qiyongzhongIcon : yiguidangIcon"
+              class="status-icon"
+            >
+          </div>
+          <div class="conversation-meta">
+            <span class="meta-item">
+              <el-icon><User /></el-icon>
+              {{ conversation.memberCount }}人
+            </span>
+            <span class="meta-item">
+              <el-icon><Calendar /></el-icon>
+              {{ formatDateTime(conversation.createdAt * 1000).split(" ")[0] }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 操作按钮（仅员工社区、进行中状态、非公告群显示） -->
+        <div v-if="canManageGroup && conversation.status === 1 && conversation.type !== ConversationType.AnnouncementGroup" class="conversation-actions">
+          <el-button type="primary" link @click="openEditDialog(conversation)">
+            编辑
+          </el-button>
+          <el-button type="primary" link @click="handleArchive(conversation)">
+            归档
+          </el-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 空状态 -->
+    <el-empty v-if="!loading && conversations.length === 0" description="暂无群组" />
+
+    <!-- 创建/编辑群组对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogMode === 'create' ? '创建群组' : '编辑群组'"
+      width="700px"
+      :close-on-click-modal="false"
+    >
+      <el-form label-width="100px" class="group-form">
+        <el-form-item label="所属亚社区：">
+          <span class="readonly-text">{{ communityName || '当前亚社区' }}</span>
+        </el-form-item>
+        <el-form-item label="群组名称：" required>
+          <el-input v-model="dialogForm.name" placeholder="请输入" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="描述：">
+          <el-input
+            v-model="dialogForm.description"
+            type="textarea"
+            placeholder="请输入"
+            :rows="3"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="群成员：" required>
+          <div class="member-selector">
+            <!-- 左侧候选人列表 -->
+            <div class="candidates-panel">
+              <div class="search-box">
+                <el-input
+                  v-model="searchKeyword"
+                  placeholder="请输入人员信息"
+                  clearable
+                  @keyup.enter="handleSearch"
+                  @clear="handleSearch"
+                >
+                  <template #suffix>
+                    <el-icon class="search-icon" @click="handleSearch">
+                      <Search />
+                    </el-icon>
+                  </template>
+                </el-input>
+              </div>
+              <div v-loading="candidatesLoading" class="candidates-list">
+                <div
+                  v-for="candidate in candidates"
+                  :key="candidate.userId"
+                  class="candidate-item"
+                  :class="{ 'is-disabled': isProtectedRole(candidate.userRole) }"
+                  @click="toggleSelect(candidate)"
+                >
+                  <el-checkbox
+                    :model-value="isSelected(candidate.userId)"
+                    :disabled="isProtectedRole(candidate.userRole)"
+                    @click.stop
+                    @change="toggleSelect(candidate)"
+                  />
+                  <el-avatar :size="32" :src="getAvatarUrl(candidate.avatar)" />
+                  <span class="candidate-name">{{ candidate.nickname }}</span>
+                  <el-tag
+                    v-if="candidate.roleName"
+                    :style="getRoleTagStyle(candidate.roleName)"
+                    size="small"
+                    class="candidate-role"
+                  >
+                    {{ candidate.roleName }}
+                  </el-tag>
+                </div>
+                <el-empty v-if="!candidatesLoading && candidates.length === 0" description="暂无候选人" :image-size="60" />
+              </div>
+            </div>
+
+            <!-- 右侧已选列表 -->
+            <div class="selected-panel">
+              <div class="selected-header">
+                <span>已选 {{ selectedMembers.length }} 人</span>
+                <el-button v-if="selectedMembers.length > 0" type="primary" link @click="clearSelected">
+                  全部移除
+                </el-button>
+              </div>
+              <div class="selected-list">
+                <div
+                  v-for="member in selectedMembers"
+                  :key="member.userId"
+                  class="selected-item"
+                >
+                  <el-avatar :size="32" :src="getAvatarUrl(member.avatar)" />
+                  <span class="selected-name">{{ member.nickname }}</span>
+                  <el-tag
+                    v-if="member.roleName"
+                    :style="getRoleTagStyle(member.roleName)"
+                    size="small"
+                    class="selected-role"
+                  >
+                    {{ member.roleName }}
+                  </el-tag>
+                  <el-icon v-if="!isProtectedRole(member.userRole)" class="remove-icon" @click="removeSelected(member.userId)">
+                    <Close />
+                  </el-icon>
+                </div>
+                <el-empty v-if="selectedMembers.length === 0" description="No Data" :image-size="60" />
+              </div>
+            </div>
+          </div>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="dialogLoading" @click="handleSave">
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.conversation-tab {
+  padding: 16px 24px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.filter-tab {
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+
+  &:hover {
+    color: var(--el-color-primary);
+  }
+
+  &.active {
+    color: var(--el-color-primary);
+    border-bottom-color: var(--el-color-primary);
+  }
+}
+
+.tip-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background-color: var(--el-color-primary-light-9);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--el-color-primary);
+
+  .el-icon {
+    font-size: 16px;
+  }
+}
+
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+// 群头像
+.group-avatar {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.conversation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  .name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+  }
+
+  .status-icon {
+    height: 18px;
+  }
+}
+
+.conversation-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+
+    .el-icon {
+      font-size: 14px;
+    }
+  }
+}
+
+.conversation-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+// 群组表单
+.group-form {
+  .readonly-text {
+    color: var(--el-text-color-regular);
+  }
+}
+
+// 成员选择器
+.member-selector {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.candidates-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  height: 300px;
+
+  .search-box {
+    padding: 12px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+
+    .search-icon {
+      cursor: pointer;
+      color: var(--el-text-color-secondary);
+
+      &:hover {
+        color: var(--el-color-primary);
+      }
+    }
+  }
+
+  .candidates-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .candidate-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--el-fill-color-light);
+    }
+
+    &.is-disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .candidate-name {
+      font-size: 14px;
+      color: var(--el-text-color-primary);
+    }
+
+    .candidate-role {
+      flex-shrink: 0;
+    }
+  }
+}
+
+.selected-panel {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  height: 300px;
+
+  .selected-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+    font-size: 14px;
+    color: var(--el-text-color-primary);
+  }
+
+  .selected-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .selected-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+
+    .selected-name {
+      font-size: 13px;
+      color: var(--el-text-color-primary);
+    }
+
+    .selected-role {
+      flex-shrink: 0;
+    }
+
+    .remove-icon {
+      cursor: pointer;
+      color: var(--el-text-color-secondary);
+      flex-shrink: 0;
+      margin-left: auto;
+
+      &:hover {
+        color: var(--el-color-danger);
+      }
+    }
+  }
+}
+</style>

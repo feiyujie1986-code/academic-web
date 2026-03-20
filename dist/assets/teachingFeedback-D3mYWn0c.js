@@ -1,0 +1,1 @@
+import{p as t}from"./index-DtqMdxTR.js";function i(e){return t({url:"/v2/admin/teaching-feedbacks",method:"get",params:e})}function n(e){return t({url:`/v2/admin/teaching-feedbacks/${e}`,method:"get"})}export{i as a,n as g};

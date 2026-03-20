@@ -1,0 +1,10 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="4" fill="url(#excel_gradient)"/>
+  <path d="M8 8H11.5L16 14.5L20.5 8H24L18 16L24 24H20.5L16 17.5L11.5 24H8L14 16L8 8Z" fill="white"/>
+  <defs>
+    <linearGradient id="excel_gradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1AE37E"/>
+      <stop offset="1" stop-color="#00CF76"/>
+    </linearGradient>
+  </defs>
+</svg>

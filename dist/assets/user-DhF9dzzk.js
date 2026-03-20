@@ -1,0 +1,1 @@
+import{p as r}from"./index-DtqMdxTR.js";function a(s,e){return r({url:`/v2/admin/classes/${s}/users`,method:"get",params:e?{userTypes:e.join(",")}:void 0})}function i(s){return r({url:`/v2/admin/classes/${s.classId}/users`,method:"post",data:s})}export{i as b,a as g};

@@ -1,2 +1,0 @@
-# academic-web
-academic-web
