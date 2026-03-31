@@ -1,0 +1,49 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [release]
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: 9
+  DEPLOY_PATH: /var/www/light-web # 修改为实际部署路径
+
+jobs:
+  deploy:
+    name: Build & Deploy to Production
+    runs-on: self-hosted # 使用自托管 runner
+    environment: production # 可选：需要手动审批
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build for production
+        run: pnpm build
+
+      - name: Deploy to local directory
+        run: |
+          sudo mkdir -p ${{ env.DEPLOY_PATH }}
+          sudo rsync -avz --delete --exclude='uploads/' --exclude='resource/' --exclude='resource-oss/' dist/ ${{ env.DEPLOY_PATH }}/
+
+      - name: Notify deployment success
+        if: success()
+        run: echo "Production deployment completed successfully!"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: echo "Production deployment failed!"
