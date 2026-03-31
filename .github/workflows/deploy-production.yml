@@ -5,9 +5,10 @@ on:
     branches: [release]
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_VERSION: 20
   PNPM_VERSION: 9
-  DEPLOY_PATH: /var/www/light-web # 修改为实际部署路径
+  DEPLOY_PATH: /var/www/light-web
 
 jobs:
   deploy:
