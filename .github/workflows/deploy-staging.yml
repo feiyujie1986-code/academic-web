@@ -38,7 +38,7 @@ jobs:
       - name: Deploy to local directory
         run: |
           mkdir -p ${{ env.DEPLOY_PATH }}
-          rsync -rltz --delete --exclude='uploads/' --exclude='resource/' --exclude='resource-oss/' dist/ ${{ env.DEPLOY_PATH }}/
+          rsync -rl --delete --exclude='uploads/' --exclude='resource/' --exclude='resource-oss/' dist/ ${{ env.DEPLOY_PATH }}/
 
       - name: Notify deployment success
         if: success()
