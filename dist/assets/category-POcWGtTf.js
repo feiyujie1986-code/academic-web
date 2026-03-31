@@ -1,1 +1,0 @@
-import{p as e}from"./index-DtqMdxTR.js";function o(){return e({url:"/v2/admin/course/categories",method:"get"})}function a(r){return e({url:"/v2/admin/course/categories",method:"post",data:r})}export{a,o as g};
