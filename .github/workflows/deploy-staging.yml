@@ -8,7 +8,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_VERSION: 20
   PNPM_VERSION: 9
-  DEPLOY_PATH: /var/www/btcommunity-web
+  DEPLOY_PATH: /www/wwwroot/lms7799
 
 jobs:
   deploy:
