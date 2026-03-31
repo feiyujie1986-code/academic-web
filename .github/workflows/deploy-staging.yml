@@ -37,8 +37,8 @@ jobs:
 
       - name: Deploy to local directory
         run: |
-          sudo mkdir -p ${{ env.DEPLOY_PATH }}
-          sudo rsync -avz --delete --exclude='uploads/' --exclude='resource/' --exclude='resource-oss/' dist/ ${{ env.DEPLOY_PATH }}/
+          mkdir -p ${{ env.DEPLOY_PATH }}
+          rsync -avz --delete --exclude='uploads/' --exclude='resource/' --exclude='resource-oss/' dist/ ${{ env.DEPLOY_PATH }}/
 
       - name: Notify deployment success
         if: success()
