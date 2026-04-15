@@ -4,7 +4,7 @@ import type { teacherDataModel } from "@/api/member/teacher"
 import type { OrganizationModel } from "@/api/organization/organization"
 import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
-import { useValidateEmail, useValidatePhone } from "@@/utils/useValidate"
+import { useValidateEmail } from "@@/utils/useValidate"
 import { onMounted, reactive, ref } from "vue"
 import {
   addTeacherApi,
@@ -14,7 +14,7 @@ import {
   resetPassApi,
   SwitchActiveApi
 } from "@/api/member/teacher"
-import { getOrganizationsApi } from "@/api/organization/organization"
+import { editOrganizationApi, getOrganizationsApi } from "@/api/organization/organization"
 
 defineOptions({
   name: "Teacher"
@@ -23,7 +23,7 @@ defineOptions({
 const loading = ref<boolean>(false)
 const { paginationData, changeCurrentPage, changePageSize } = usePagination()
 
-// 机构列表
+// 小组列表
 const organizationList = ref<OrganizationModel[]>([])
 
 async function getOrganizationList() {
@@ -87,92 +87,36 @@ async function getTableData() {
 }
 getTableData()
 
-// 修改密码对话框
-const mpDialogVisible = ref<boolean>(false)
-
-const mpFormRef = ref<FormInstance>()
-
-const mpFormData = reactive({
-  oldPassword: "",
-  newPassword: "",
-  rePassword: ""
-})
-
-function mpInitForm() {
-  mpFormData.oldPassword = ""
-  mpFormData.newPassword = ""
-  mpFormData.rePassword = ""
-}
-
-function mpHandleClose(done: () => void) {
-  mpInitForm()
-  done()
-}
-
-function equalToPassword(rule: any, value: any, callback: any) {
-  if (mpFormData.newPassword !== value) {
-    callback(new Error("两次输入的密码不一致"))
-  } else {
-    callback()
-  }
-}
-
-const mpFormRules: FormRules = reactive({
-  oldPassword: [{ required: true, trigger: "blur", message: "旧密码不能为空" }],
-  newPassword: [
-    { required: true, trigger: "blur", message: "新密码不能为空" },
-    { min: 6, max: 20, message: "长度在 6 到 20 个字符", trigger: "blur" }
-  ],
-  rePassword: [
-    { required: true, trigger: "blur", message: "确认密码不能为空" },
-    { required: true, validator: equalToPassword, trigger: "blur" }
-  ]
-})
-
-function mpCloseDialog() {
-  mpFormRef.value?.resetFields()
-  mpInitForm()
-  mpDialogVisible.value = false
-}
-
-function _modifyDialog(row: teacherDataModel) {
-  activeRow = row
-  mpDialogVisible.value = true
-}
-
-function mpOperateAction(formEl: FormInstance | undefined) {
-  if (!formEl) return
-  formEl.validate(async (valid) => {
-    if (valid) {
-      await resetPassApi({
-        id: activeRow.id,
-        password: mpFormData.newPassword
-      })
-        .then((res) => {
-          if (res.code === 0) {
-            ElMessage({ type: "success", message: res.msg })
-            mpCloseDialog()
-          }
-        })
-        .catch(() => {})
-    }
+// 重置密码
+function resetPasswordAction(row: teacherDataModel) {
+  ElMessageBox.confirm(`确定要重置「${row.nickname}」的密码吗？`, "重置密码", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
   })
+    .then(() => {
+      resetPassApi({ id: row.id }).then((res) => {
+        if (res.code === 0) {
+          ElMessage({ type: "success", message: res.msg })
+        }
+      })
+    })
+    .catch(() => {})
 }
 
-// 添加、编辑用户对话框
+// 添加、编辑对话框
 
 function initForm() {
   formRef.value?.resetFields()
+  formData.username = ""
   formData.nickname = ""
   formData.password = ""
-  formData.phone = ""
   formData.email = ""
   formData.active = true
-  formData.roleId = ""
   formData.gender = 1
   formData.remark = ""
   formData.organizationId = undefined
-  formData.location = ""
+  isLeader.value = false
 }
 
 const dialogVisible = ref<boolean>(false)
@@ -183,17 +127,14 @@ function handleClose(done: () => void) {
 
 const formRef = ref<FormInstance>()
 const formData = reactive({
-  // username: "",
+  username: "",
   nickname: "",
   password: "",
-  phone: "",
   email: "",
   active: true,
-  roleId: "",
   remark: "",
   gender: 1,
-  organizationId: undefined as number | undefined,
-  location: ""
+  organizationId: undefined as number | undefined
 })
 
 // 密码规则验证状态
@@ -226,22 +167,19 @@ function validatePassword(_rule: any, value: any, callback: any) {
 }
 
 const formRules: FormRules = reactive({
-  nickname: [{ trigger: "blur" }],
+  nickname: [{ required: true, trigger: "blur", message: "请填写昵称" }],
   password: [
-    { required: true, trigger: "blur", message: "请填写密码" },
     { min: 8, max: 20, message: "密码长度应为 8 到 20 个字符", trigger: "blur" },
     { validator: validatePassword, trigger: "blur" }
   ],
-  phone: [{ validator: useValidatePhone, trigger: "blur" }],
-  email: [
-    { required: true, message: "请填写邮箱", trigger: "blur" },
-    { validator: useValidateEmail, trigger: "blur" }
-  ],
-  roleId: [{ required: true, trigger: "change", message: "请选择角色" }]
+  email: [{ validator: useValidateEmail, trigger: "blur" }],
+  organizationId: []
 })
+
 const kind = ref("")
 const title = ref("")
 const submitting = ref(false)
+
 function addDialog() {
   initForm()
   kind.value = "Add"
@@ -263,17 +201,33 @@ function operateAction(formEl: FormInstance | undefined) {
       try {
         if (kind.value === "Add") {
           const res = await addTeacherApi({
+            username: formData.username || undefined,
             nickname: formData.nickname,
-            password: formData.password,
-            // phone: formData.phone,
+            password: formData.password || undefined,
             remark: formData.remark,
             email: formData.email,
             active: formData.active,
             gender: formData.gender,
             organizationId: formData.organizationId,
-            location: formData.location
           })
           if (res.code === 0) {
+            // 新建后设为组长
+            const newUserId = res.data?.id
+            if (isLeader.value && formData.organizationId && newUserId) {
+              const org = organizationList.value.find(o => o.id === formData.organizationId)
+              if (org) {
+                const currentLeaderIds = (org.leaders ?? []).map(l => l.userId)
+                if (currentLeaderIds.length < 2) {
+                  await editOrganizationApi({
+                    id: org.id,
+                    name: org.name,
+                    remark: org.remark,
+                    leaderIds: [...currentLeaderIds, newUserId]
+                  })
+                  org.leaders = [...(org.leaders ?? []), { userId: newUserId, nickname: formData.nickname }]
+                }
+              }
+            }
             ElMessage({ type: "success", message: res.msg })
             getTableData()
           }
@@ -281,13 +235,11 @@ function operateAction(formEl: FormInstance | undefined) {
           const res = await editTeacherApi({
             id: activeRow.id,
             nickname: formData.nickname,
-            // phone: formData.phone,
             remark: formData.remark,
             email: formData.email,
             active: formData.active,
             gender: formData.gender,
             organizationId: formData.organizationId,
-            location: formData.location
           })
           if (res.code === 0) {
             ElMessage({ type: "success", message: res.msg })
@@ -333,17 +285,117 @@ function handleCurrentChange(value: number) {
 
 function editDialog(row: teacherDataModel) {
   activeRow = row
+  formData.username = row.username
   formData.nickname = row.nickname
-  // formData.phone = row.phone
   formData.remark = row.remark
-  formData.email = row.email
+  formData.email = row.email ?? ""
   formData.active = row.active
   formData.gender = row.gender
   formData.organizationId = row.organizationId
-  formData.location = row.location || ""
   kind.value = "Edit"
   title.value = "编辑教师"
+  computeIsLeader()
   dialogVisible.value = true
+}
+
+// ===== 组长 =====
+
+/** 核心：修改某小组的组长列表，返回是否成功 */
+async function setLeaderForOrg(userId: number, nickname: string, orgId: number, val: boolean): Promise<boolean> {
+  const org = organizationList.value.find(o => o.id === orgId)
+  if (!org) return false
+
+  const currentLeaderIds = (org.leaders ?? []).map(l => l.userId)
+  let newLeaderIds: number[]
+  if (val) {
+    if (currentLeaderIds.length >= 2) {
+      ElMessage.warning("该小组已有 2 位组长，无法继续设置")
+      return false
+    }
+    newLeaderIds = [...currentLeaderIds, userId]
+  } else {
+    newLeaderIds = currentLeaderIds.filter(id => id !== userId)
+  }
+
+  const res = await editOrganizationApi({
+    id: org.id,
+    name: org.name,
+    remark: org.remark,
+    leaderIds: newLeaderIds
+  })
+  if (res.code === 0) {
+    ElMessage.success(val ? "已设为组长" : "已取消组长")
+    org.leaders = val
+      ? [...(org.leaders ?? []), { userId, nickname }]
+      : (org.leaders ?? []).filter(l => l.userId !== userId)
+    return true
+  }
+  return false
+}
+
+// ----- 列表行组长 switch -----
+function isUserLeader(row: teacherDataModel): boolean {
+  if (!row.organizationId) return false
+  const org = organizationList.value.find(o => o.id === row.organizationId)
+  return org?.leaders?.some(l => l.userId === row.id) ?? false
+}
+
+const leaderLoadingIds = reactive(new Set<number>())
+
+async function handleListLeaderChange(row: teacherDataModel, val: boolean) {
+  if (!row.organizationId) {
+    ElMessage.warning("该教师尚未分配小组，无法设为组长")
+    return
+  }
+  leaderLoadingIds.add(row.id)
+  try {
+    await setLeaderForOrg(row.id, row.nickname, row.organizationId, val)
+  } catch {
+    ElMessage.error("操作失败")
+  } finally {
+    leaderLoadingIds.delete(row.id)
+  }
+}
+
+// ----- 弹窗组长 switch -----
+const isLeader = ref(false)
+const isLeaderLoading = ref(false)
+
+function computeIsLeader() {
+  if (!activeRow || !formData.organizationId) {
+    isLeader.value = false
+    return
+  }
+  const org = organizationList.value.find(o => o.id === formData.organizationId)
+  isLeader.value = org?.leaders?.some(l => l.userId === activeRow.id) ?? false
+}
+
+watch(() => formData.organizationId, () => {
+  if (kind.value === "Edit") {
+    computeIsLeader()
+  } else {
+    isLeader.value = false
+  }
+})
+
+async function handleIsLeaderChange(val: boolean) {
+  if (!formData.organizationId) {
+    ElMessage.warning("请先选择小组，才能设为组长")
+    isLeader.value = !val
+    return
+  }
+  // 新增模式：仅记录标志，提交时统一处理
+  if (kind.value === "Add") return
+
+  isLeaderLoading.value = true
+  try {
+    const success = await setLeaderForOrg(activeRow.id, activeRow.nickname, formData.organizationId, val)
+    if (!success) isLeader.value = !val
+  } catch {
+    isLeader.value = !val
+  } finally {
+    isLeaderLoading.value = false
+  }
 }
 
 // 切换用户状态
@@ -374,16 +426,16 @@ function switchAction(id: number, active: boolean) {
   <div class="app-container">
     <el-card shadow="never" class="search-wrapper">
       <el-form :inline="true" :model="searchFormData">
-        <el-form-item prop="nickname" label="姓名">
-          <el-input v-model="searchFormData.nickname" placeholder="姓名" clearable style="width: 200px" />
+        <el-form-item prop="nickname" label="昵称">
+          <el-input v-model="searchFormData.nickname" placeholder="昵称" clearable style="width: 200px" />
         </el-form-item>
         <el-form-item prop="email" label="邮箱">
           <el-input v-model="searchFormData.email" placeholder="邮箱" clearable style="width: 200px" />
         </el-form-item>
-        <el-form-item prop="organizationId" label="机构">
+        <el-form-item prop="organizationId" label="小组">
           <el-select
             v-model="searchFormData.organizationId"
-            placeholder="请选择机构"
+            placeholder="请选择小组"
             clearable
             filterable
             style="width: 200px"
@@ -422,10 +474,22 @@ function switchAction(id: number, active: boolean) {
       <div class="table-wrapper">
         <el-table :data="tableData">
           <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="nickname" label="姓名" width="110" />
+          <el-table-column prop="username" label="账号" width="130" show-overflow-tooltip />
+          <el-table-column prop="nickname" label="昵称" width="110" />
           <el-table-column prop="email" label="邮箱" width="180" show-overflow-tooltip />
-          <el-table-column prop="organizationName" label="机构" width="200" show-overflow-tooltip />
-          <el-table-column prop="location" label="所在地" width="150" show-overflow-tooltip />
+          <el-table-column prop="organizationName" label="小组" width="200" show-overflow-tooltip />
+          <el-table-column label="设为组长" width="120">
+            <template #default="scope">
+              <el-switch
+                :model-value="isUserLeader(scope.row)"
+                :loading="leaderLoadingIds.has(scope.row.id)"
+                :disabled="!scope.row.organizationId"
+                active-text="是"
+                inactive-text="否"
+                @change="(val) => handleListLeaderChange(scope.row, val as boolean)"
+              />
+            </template>
+          </el-table-column>
           <el-table-column prop="createdDate" label="创建日期" width="110" />
           <el-table-column prop="lastLoginDate" label="最近登录时间" width="180" show-overflow-tooltip />
           <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
@@ -439,28 +503,28 @@ function switchAction(id: number, active: boolean) {
                 active-text="启用"
                 inactive-text="禁用"
                 @change="switchAction(scope.row.id, scope.row.active)"
-                :disabled="scope.row.username === 'admin' && scope.row.role === 'root'"
               />
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" align="center" width="180">
+          <el-table-column fixed="right" label="操作" align="center" width="240">
             <template #default="scope">
-              <el-button type="primary" text icon="Edit" size="small" @click="editDialog(scope.row)">
-                编辑
-              </el-button>
-              <!-- <el-button type="primary" text icon="Key" size="small" @click="modifyDialog(scope.row)">
-                修改密码
-              </el-button> -->
-              <el-button
-                type="danger"
-                text
-                icon="Delete"
-                size="small"
-                @click="deleteTeacherAction(scope.row)"
-                :disabled="scope.row.username === 'admin'"
-              >
-                删除
-              </el-button>
+              <div style="white-space: nowrap">
+                <el-button type="primary" text icon="Edit" size="small" @click="editDialog(scope.row)">
+                  编辑
+                </el-button>
+                <el-button type="primary" text icon="Key" size="small" @click="resetPasswordAction(scope.row)">
+                  重置
+                </el-button>
+                <el-button
+                  type="danger"
+                  text
+                  icon="Delete"
+                  size="small"
+                  @click="deleteTeacherAction(scope.row)"
+                >
+                  删除
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -490,8 +554,16 @@ function switchAction(id: number, active: boolean) {
         <!-- 欺骗浏览器密码管理器 -->
         <input type="text" style="display: none" autocomplete="username">
         <input type="password" style="display: none" autocomplete="new-password">
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="formData.email" autocomplete="off" :disabled="kind === 'Edit'" />
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="formData.nickname" autocomplete="off" />
+        </el-form-item>
+        <el-form-item label="账号" prop="username">
+          <el-input
+            v-model="formData.username"
+            autocomplete="off"
+            :disabled="kind === 'Edit'"
+            :placeholder="kind === 'Add' ? '如不填，默认通过昵称生成' : ''"
+          />
         </el-form-item>
         <el-form-item label="密码" prop="password" v-if="kind === 'Add'">
           <el-input
@@ -499,6 +571,7 @@ function switchAction(id: number, active: boolean) {
             autocomplete="new-password"
             type="password"
             show-password
+            placeholder="如不填写，使用默认密码"
             @focus="passwordFocused = true"
             @blur="passwordFocused = false"
           />
@@ -514,14 +587,13 @@ function switchAction(id: number, active: boolean) {
             </div>
           </div>
         </el-form-item>
-        <el-form-item label="姓名" prop="nickname">
-          <el-input v-model="formData.nickname" autocomplete="off" />
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="formData.email" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="机构" prop="organizationId">
+        <el-form-item label="小组" prop="organizationId">
           <el-select
             v-model="formData.organizationId"
-            placeholder="请选择机构，也可输入名称快速查找"
-            clearable
+            placeholder="请选择小组，也可输入名称快速查找"
             filterable
             style="width: 100%"
           >
@@ -533,6 +605,18 @@ function switchAction(id: number, active: boolean) {
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="设为组长">
+          <el-switch
+            v-model="isLeader"
+            :loading="isLeaderLoading"
+            active-text="是"
+            inactive-text="否"
+            @change="(val) => handleIsLeaderChange(val as boolean)"
+          />
+          <span class="form-tip">
+            {{ kind === 'Edit' ? '切换立即生效，最多2位组长' : '新增后自动设置' }}
+          </span>
+        </el-form-item>
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="formData.gender">
             <el-radio :value="1" class="radio-item">
@@ -542,9 +626,6 @@ function switchAction(id: number, active: boolean) {
               女
             </el-radio>
           </el-radio-group>
-        </el-form-item>
-        <el-form-item label="所在地" prop="location">
-          <el-input v-model="formData.location" type="textarea" :rows="3" placeholder="请输入所在地" maxlength="200" show-word-limit />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注" maxlength="500" show-word-limit />
@@ -559,36 +640,6 @@ function switchAction(id: number, active: boolean) {
             取消
           </el-button>
           <el-button type="primary" :loading="submitting" @click="operateAction(formRef)">
-            确认
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-    <el-dialog v-model="mpDialogVisible" title="修改密码" :before-close="mpHandleClose" width="25%">
-      <el-form
-        ref="mpFormRef"
-        :model="mpFormData"
-        :rules="mpFormRules"
-        label-width="100px"
-        label-position="right"
-        style="width: 95%; margin-top: 15px"
-      >
-        <el-form-item label="旧密码" prop="oldPassword">
-          <el-input v-model="mpFormData.oldPassword" autocomplete="off" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="mpFormData.newPassword" autocomplete="off" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="确认密码" prop="rePassword">
-          <el-input v-model="mpFormData.rePassword" autocomplete="off" type="password" show-password />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="mpCloseDialog">
-            取消
-          </el-button>
-          <el-button type="primary" @click="mpOperateAction(mpFormRef)">
             确认
           </el-button>
         </div>
@@ -622,12 +673,9 @@ function switchAction(id: number, active: boolean) {
   font-size: 14px;
 }
 
-.last-login-time,
-.text-ellipsis {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
+.form-tip {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #909399;
 }
 </style>

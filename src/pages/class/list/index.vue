@@ -7,7 +7,6 @@ import {
   deleteClassApi,
   getClasssApi
 } from "@/api/class/class"
-import { getTeachersApi as getSeniorTeachersApi } from "@/api/member/seniorTeacher"
 import { getStudentsApi } from "@/api/member/student"
 import { getTeachersApi } from "@/api/member/teacher"
 import CustomText from "@/common/components/CustomText/index.vue"
@@ -25,7 +24,6 @@ const { paginationData, changeCurrentPage, changePageSize } = usePagination()
 const searchFormData = reactive({
   name: "",
   teacherId: undefined as number | undefined,
-  seniorTeacherId: undefined as number | undefined,
   studentId: undefined as number | undefined
 })
 
@@ -41,14 +39,13 @@ function handleSearch() {
 function resetSearch() {
   searchFormData.name = ""
   searchFormData.teacherId = undefined
-  searchFormData.seniorTeacherId = undefined
   searchFormData.studentId = undefined
 }
 // 定义人员数据模型
 interface userDataModel {
   id: number
   nickname: string
-  email: string
+  email?: string
 }
 
 // teacher data
@@ -68,23 +65,6 @@ async function getTeacherOption() {
   }
 }
 getTeacherOption()
-
-// seniorTeacher data
-const seniorTeacherOptions = ref<userDataModel[]>([])
-async function getSeniorTeacherOption() {
-  try {
-    const res = await getSeniorTeachersApi({
-      page: 1,
-      pageSize: 999999
-    })
-    if (res.code === 0) {
-      seniorTeacherOptions.value = res.data.list
-    }
-  } catch (error) {
-    console.log(error)
-  }
-}
-getSeniorTeacherOption()
 
 // student data
 const studentOptions = ref<userDataModel[]>([])
@@ -112,20 +92,16 @@ async function getTableData() {
   loading.value = true
   try {
     const teacherIds = ref<number[]>([])
-    const seniorTeacherIds = ref<number[]>([])
     const studnetIds = ref<number[]>([])
     if (searchFormData.teacherId) {
       teacherIds.value.push(searchFormData.teacherId)
-    }
-    if (searchFormData.seniorTeacherId) {
-      seniorTeacherIds.value.push(searchFormData.seniorTeacherId)
     }
     if (searchFormData.studentId) {
       studnetIds.value.push(searchFormData.studentId)
     }
     const res = await getClasssApi({
       teacherIds: teacherIds.value,
-      seniorTeacherIds: seniorTeacherIds.value,
+      seniorTeacherIds: [],
       studentIds: studnetIds.value,
       name: searchFormData.name,
       page: paginationData.currentPage,
@@ -152,7 +128,7 @@ function goToAddClass() {
 
 // 删除课程
 function deleteClassAction(row: classListItem) {
-  ElMessageBox.confirm("此操作将永久删除该课程, 是否继续?", "提示", {
+  ElMessageBox.confirm("此操作将永久删除该小班, 是否继续?", "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning"
@@ -202,16 +178,6 @@ function scheduleClass(row: classListItem) {
           <el-form-item prop="name" label="班级名称">
             <el-input v-model="searchFormData.name" placeholder="请输入班级名称" clearable style="width: 150px" />
           </el-form-item>
-          <el-form-item prop="seniorTeacherId" label="大使">
-            <el-select v-model="searchFormData.seniorTeacherId" placeholder="请选择大使" clearable filterable style="width: 120px">
-              <el-option
-                v-for="item in seniorTeacherOptions"
-                :key="item.id"
-                :label="item.nickname"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
           <el-form-item prop="teacherId" label="教师">
             <el-select v-model="searchFormData.teacherId" placeholder="请选择教师" clearable filterable style="width: 120px">
               <el-option
@@ -243,7 +209,7 @@ function scheduleClass(row: classListItem) {
         </el-form>
         <div class="operate-wrapper">
           <el-button type="primary" icon="Plus" @click="goToAddClass">
-            新增班级
+            新增小班
           </el-button>
         </div>
       </div>
@@ -251,7 +217,7 @@ function scheduleClass(row: classListItem) {
         <el-table :data="tableData" header-cell-class-name="class-list-header">
           <!-- <el-table-column prop="classId" label="ID" /> -->
           <!--  <el-table-column type="selection" width="40" /> -->
-          <el-table-column label="班级名称">
+          <el-table-column label="小班名称">
             <template #default="scope">
               <el-button link type="primary" class="class-name-btn" @click="scheduleClass(scope.row)">
                 {{ scope.row.name }}

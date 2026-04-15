@@ -1,11 +1,8 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from "element-plus"
-import type { OrganizationModel } from "@/api/organization/organization"
-import { onMounted, reactive, ref } from "vue"
+import { reactive, ref } from "vue"
 import { addClassApi } from "@/api/class/class"
-import { getTeachersApi as getSeniorTeachersApi } from "@/api/member/seniorTeacher"
 import { getTeachersApi } from "@/api/member/teacher"
-import { getOrganizationsApi } from "@/api/organization/organization"
 import SelectUserModal from "../components/SelectUserModal.vue"
 
 defineOptions({
@@ -19,7 +16,7 @@ const loading = ref<boolean>(false)
 interface userDataModel {
   id: number
   nickname: string
-  email: string
+  email?: string
 }
 
 // teacher data
@@ -39,41 +36,6 @@ async function getTeacherOption() {
 }
 getTeacherOption()
 
-// seniorTeacher data
-const seniorTeacherOptions = ref<userDataModel[]>([])
-async function getSeniorTeacherOption() {
-  try {
-    const res = await getSeniorTeachersApi({
-      page: 1,
-      pageSize: 999999
-    })
-    if (res.code === 0) {
-      seniorTeacherOptions.value = res.data.list
-    }
-  } catch (error) {
-    console.log(error)
-  }
-}
-getSeniorTeacherOption()
-
-// 机构列表
-const organizationList = ref<OrganizationModel[]>([])
-
-async function getOrganizationList() {
-  try {
-    const res = await getOrganizationsApi({ page: 1, pageSize: 10000 })
-    if (res.code === 0) {
-      organizationList.value = res.data.list
-    }
-  } catch (error) {
-    console.log(error)
-  }
-}
-
-onMounted(() => {
-  getOrganizationList()
-})
-
 // 表单相关
 const formRef = ref<FormInstance>()
 const formData = reactive({
@@ -82,8 +44,6 @@ const formData = reactive({
   startTime: 0,
   endTime: 0,
   rangeTime: [],
-  organizationId: undefined as number | undefined,
-  seniorTeachers: [] as userDataModel[],
   teachers: [] as userDataModel[],
   students: [] as userDataModel[],
   classMonitors: [] as userDataModel[]
@@ -101,8 +61,7 @@ const formRules: FormRules = reactive({
         callback()
       }
     }
-  }],
-  organizationId: [{ required: true, trigger: "change", message: "请选择机构" }]
+  }]
 })
 
 // 返回列表页
@@ -118,10 +77,6 @@ function submitForm(formEl: FormInstance | undefined) {
       // 判断必填项
       if (formData.teachers.length === 0) {
         ElMessage.error("请选择教师")
-        return
-      }
-      if (formData.seniorTeachers.length === 0) {
-        ElMessage.error("请选择大使")
         return
       }
       if (formData.students.length === 0) {
@@ -143,9 +98,8 @@ function submitForm(formEl: FormInstance | undefined) {
           remark: formData.remark,
           startTime: formData.rangeTime[0] / 1000,
           endTime: formData.rangeTime[1] / 1000 + 86399,
-          organizationId: formData.organizationId,
           teacherIds: formData.teachers.map(item => item.id),
-          seniorTeacherIds: formData.seniorTeachers.map(item => item.id),
+          seniorTeacherIds: [],
           studentIds: formData.students
             .filter(student => !formData.classMonitors.some(monitor => monitor.id === student.id))
             .map(item => item.id),
@@ -154,7 +108,7 @@ function submitForm(formEl: FormInstance | undefined) {
         if (res.code === 0) {
           const classId = res.data.classId
           ElMessageBox.confirm(
-            "班级创建成功，是否前往排课？",
+            "小班创建成功，是否前往排课？",
             "提示",
             {
               confirmButtonText: "立即排课",
@@ -193,8 +147,6 @@ function removeUserList(field: string, id: number) {
     formData.teachers = formData.teachers.filter(item => item.id !== id)
   } else if (field === "classMonitors") {
     formData.classMonitors = formData.classMonitors.filter(item => item.id !== id)
-  } else if (field === "seniorTeachers") {
-    formData.seniorTeachers = formData.seniorTeachers.filter(item => item.id !== id)
   }
 }
 
@@ -204,42 +156,37 @@ const userSelectModal = ref({
   userList: [] as userDataModel[],
   selectedIds: [] as number[],
   selectedUserList: [] as userDataModel[],
+  initialSelectedUsers: [] as userDataModel[],
   userType: "teacher",
   minCount: 1,
   maxCount: 100,
-  useServerPagination: false
+  useGroupApi: false
 })
 
 // 打开选择弹窗
 function openSelect(type: string) {
   if (type === "student") {
-    // 学生选择使用服务端分页模式
+    // 学生选择使用分组懒加载 API
     userSelectModal.value.maxCount = 999
     userSelectModal.value.title = "选择学生"
     userSelectModal.value.selectedIds = formData.students.map(item => item.id)
     userSelectModal.value.selectedUserList = formData.students
-    userSelectModal.value.useServerPagination = true
+    userSelectModal.value.initialSelectedUsers = formData.students
+    userSelectModal.value.useGroupApi = true
   } else if (type === "teacher") {
     userSelectModal.value.maxCount = 999
     userSelectModal.value.title = "选择教师"
     userSelectModal.value.userList = teacherOptions.value
     userSelectModal.value.selectedIds = formData.teachers.map(item => item.id)
     userSelectModal.value.selectedUserList = formData.teachers
-    userSelectModal.value.useServerPagination = false
+    userSelectModal.value.useGroupApi = false
   } else if (type === "classMonitor") {
     userSelectModal.value.maxCount = 1
     userSelectModal.value.title = "选择班长"
     userSelectModal.value.userList = formData.students
     userSelectModal.value.selectedIds = formData.classMonitors.map(item => item.id)
     userSelectModal.value.selectedUserList = formData.classMonitors
-    userSelectModal.value.useServerPagination = false
-  } else if (type === "seniorTeacher") {
-    userSelectModal.value.maxCount = 999
-    userSelectModal.value.title = "选择大使"
-    userSelectModal.value.userList = seniorTeacherOptions.value
-    userSelectModal.value.selectedIds = formData.seniorTeachers.map(item => item.id)
-    userSelectModal.value.selectedUserList = formData.seniorTeachers
-    userSelectModal.value.useServerPagination = false
+    userSelectModal.value.useGroupApi = false
   } else {
     ElMessage.warning("请选择正确的用户类型")
     return
@@ -259,8 +206,6 @@ function handleUserSelectConfirm(selectUserIds: number[], selectedUsers?: userDa
     formData.teachers = users
   } else if (userSelectModal.value.userType === "classMonitor") {
     formData.classMonitors = users
-  } else if (userSelectModal.value.userType === "seniorTeacher") {
-    formData.seniorTeachers = users
   }
 }
 </script>
@@ -277,8 +222,8 @@ function handleUserSelectConfirm(selectUserIds: number[], selectedUsers?: userDa
         style="max-width: 800px; margin: 20px auto"
       >
         <!-- 班级名称 -->
-        <el-form-item label="班级名称" prop="name">
-          <el-input v-model="formData.name" autocomplete="off" placeholder="请输入班级名称" :maxlength="50" clearable show-word-limit />
+        <el-form-item label="小班名称" prop="name">
+          <el-input v-model="formData.name" autocomplete="off" placeholder="请输入小班名称" :maxlength="50" clearable show-word-limit />
         </el-form-item>
 
         <!-- 开课日期 -->
@@ -292,44 +237,6 @@ function handleUserSelectConfirm(selectUserIds: number[], selectedUsers?: userDa
             value-format="x"
             style="width: 300px;"
           />
-        </el-form-item>
-
-        <!-- 机构 -->
-        <el-form-item label="机构" prop="organizationId" required>
-          <el-select
-            v-model="formData.organizationId"
-            placeholder="请选择机构，也可输入名称快速查找"
-            filterable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in organizationList"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </el-select>
-          <div class="form-item-tip">
-            <el-icon><InfoFilled /></el-icon>
-            <span>班级创建后机构不可修改，请谨慎选择</span>
-          </div>
-        </el-form-item>
-
-        <!-- 大使 -->
-        <el-form-item label="大使" required>
-          <el-button type="primary" size="small" plain @click="openSelect('seniorTeacher')">
-            选择大使
-          </el-button>
-          <div class="selected-tags">
-            <span
-              v-for="item in formData.seniorTeachers"
-              :key="item.id"
-              class="tag-item"
-            >
-              {{ item.nickname }}
-              <el-icon class="el-icon-close" @click="removeUserList('seniorTeachers', item.id)"><Close /></el-icon>
-            </span>
-          </div>
         </el-form-item>
 
         <!-- 教师 -->
@@ -414,10 +321,10 @@ function handleUserSelectConfirm(selectUserIds: number[], selectedUsers?: userDa
       :user-type="userSelectModal.userType"
       :selected-user-ids="userSelectModal.selectedIds"
       :user-list="userSelectModal.userList"
+      :initial-selected-users="userSelectModal.initialSelectedUsers"
       :min-select-count="userSelectModal.minCount"
       :max-select-count="userSelectModal.maxCount"
-      :use-server-pagination="userSelectModal.useServerPagination"
-      :organization-id="formData.organizationId"
+      :use-group-api="userSelectModal.useGroupApi"
       @confirm="handleUserSelectConfirm"
     />
   </div>

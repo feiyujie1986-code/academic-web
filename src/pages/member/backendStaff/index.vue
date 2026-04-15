@@ -1,23 +1,23 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from "element-plus"
-import type { seniorTeacherDataModel } from "@/api/member/seniorTeacher"
+import type { BackendStaffModel } from "@/api/member/backendStaff"
 import type { OrganizationModel } from "@/api/organization/organization"
 import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
 import { useValidateEmail } from "@@/utils/useValidate"
 import { onMounted, reactive, ref } from "vue"
 import {
-  addTeacherApi,
-  deleteTeacherApi,
-  editTeacherApi,
-  getTeachersApi,
-  resetPassApi,
-  SwitchActiveApi
-} from "@/api/member/seniorTeacher"
+  addBackendStaffApi,
+  deleteBackendStaffApi,
+  editBackendStaffApi,
+  getBackendStaffsApi,
+  resetBackendStaffPassApi,
+  switchBackendStaffActiveApi
+} from "@/api/member/backendStaff"
 import { editOrganizationApi, getOrganizationsApi } from "@/api/organization/organization"
 
 defineOptions({
-  name: "SeniorTeacher"
+  name: "BackendStaff"
 })
 
 const loading = ref<boolean>(false)
@@ -59,13 +59,13 @@ function resetSearch() {
   searchFormData.organizationId = undefined
 }
 
-const tableData = ref<seniorTeacherDataModel[]>([])
-let activeRow: seniorTeacherDataModel
+const tableData = ref<BackendStaffModel[]>([])
+let activeRow: BackendStaffModel
 
 async function getTableData() {
   loading.value = true
   try {
-    const res = await getTeachersApi({
+    const res = await getBackendStaffsApi({
       email: searchFormData.email || undefined,
       nickname: searchFormData.nickname || undefined,
       organizationId: searchFormData.organizationId,
@@ -88,14 +88,14 @@ async function getTableData() {
 getTableData()
 
 // 重置密码
-function resetPasswordAction(row: seniorTeacherDataModel) {
+function resetPasswordAction(row: BackendStaffModel) {
   ElMessageBox.confirm(`确定要重置「${row.nickname}」的密码吗？`, "重置密码", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning"
   })
     .then(() => {
-      resetPassApi({ id: row.id }).then((res) => {
+      resetBackendStaffPassApi({ id: row.id }).then((res) => {
         if (res.code === 0) {
           ElMessage({ type: "success", message: res.msg })
         }
@@ -173,17 +173,15 @@ const formRules: FormRules = reactive({
     { validator: validatePassword, trigger: "blur" }
   ],
   email: [{ validator: useValidateEmail, trigger: "blur" }],
-  organizationId: []
+  organizationId: [{ required: true, trigger: "change", message: "请选择小组" }]
 })
-
 const kind = ref("")
 const title = ref("")
 const submitting = ref(false)
-
 function addDialog() {
   initForm()
   kind.value = "Add"
-  title.value = "新增长执"
+  title.value = "新增事工同工"
   dialogVisible.value = true
 }
 
@@ -200,15 +198,15 @@ function operateAction(formEl: FormInstance | undefined) {
       submitting.value = true
       try {
         if (kind.value === "Add") {
-          const res = await addTeacherApi({
+          const res = await addBackendStaffApi({
             username: formData.username || undefined,
             nickname: formData.nickname,
             password: formData.password || undefined,
             remark: formData.remark,
-            email: formData.email,
+            email: formData.email || undefined,
             active: formData.active,
             gender: formData.gender,
-            organizationId: formData.organizationId,
+            organizationId: formData.organizationId
           })
           if (res.code === 0) {
             // 新建后设为组长
@@ -232,11 +230,11 @@ function operateAction(formEl: FormInstance | undefined) {
             getTableData()
           }
         } else if (kind.value === "Edit") {
-          const res = await editTeacherApi({
+          const res = await editBackendStaffApi({
             id: activeRow.id,
             nickname: formData.nickname,
             remark: formData.remark,
-            email: formData.email,
+            email: formData.email || undefined,
             active: formData.active,
             gender: formData.gender,
             organizationId: formData.organizationId
@@ -254,7 +252,7 @@ function operateAction(formEl: FormInstance | undefined) {
   })
 }
 
-function deleteTeacherAction(row: seniorTeacherDataModel) {
+function deleteAction(row: BackendStaffModel) {
   ElMessageBox.confirm("此操作将永久删除该用户, 是否继续?", "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
@@ -262,7 +260,7 @@ function deleteTeacherAction(row: seniorTeacherDataModel) {
   })
     .then(() => {
       const index = tableData.value.indexOf(row)
-      deleteTeacherApi({ id: row.id }).then((res) => {
+      deleteBackendStaffApi({ id: row.id }).then((res) => {
         if (res.code === 0) {
           ElMessage({ type: "success", message: res.msg })
           tableData.value.splice(index, 1)
@@ -283,7 +281,7 @@ function handleCurrentChange(value: number) {
   getTableData()
 }
 
-function editDialog(row: seniorTeacherDataModel) {
+function editDialog(row: BackendStaffModel) {
   activeRow = row
   formData.username = row.username
   formData.nickname = row.nickname
@@ -293,7 +291,7 @@ function editDialog(row: seniorTeacherDataModel) {
   formData.gender = row.gender
   formData.organizationId = row.organizationId
   kind.value = "Edit"
-  title.value = "编辑大使"
+  title.value = "编辑事工同工"
   computeIsLeader()
   dialogVisible.value = true
 }
@@ -334,7 +332,7 @@ async function setLeaderForOrg(userId: number, nickname: string, orgId: number, 
 }
 
 // ----- 列表行组长 switch -----
-function isUserLeader(row: seniorTeacherDataModel): boolean {
+function isUserLeader(row: BackendStaffModel): boolean {
   if (!row.organizationId) return false
   const org = organizationList.value.find(o => o.id === row.organizationId)
   return org?.leaders?.some(l => l.userId === row.id) ?? false
@@ -342,9 +340,9 @@ function isUserLeader(row: seniorTeacherDataModel): boolean {
 
 const leaderLoadingIds = reactive(new Set<number>())
 
-async function handleListLeaderChange(row: seniorTeacherDataModel, val: boolean) {
+async function handleListLeaderChange(row: BackendStaffModel, val: boolean) {
   if (!row.organizationId) {
-    ElMessage.warning("该长执尚未分配小组，无法设为组长")
+    ElMessage.warning("该事工同工尚未分配小组，无法设为组长")
     return
   }
   leaderLoadingIds.add(row.id)
@@ -400,7 +398,7 @@ async function handleIsLeaderChange(val: boolean) {
 
 // 切换用户状态
 function switchAction(id: number, active: boolean) {
-  SwitchActiveApi({ id, active })
+  switchBackendStaffActiveApi({ id, active })
     .then((res) => {
       if (res.code === 0) {
         if (active) {
@@ -515,13 +513,7 @@ function switchAction(id: number, active: boolean) {
                 <el-button type="primary" text icon="Key" size="small" @click="resetPasswordAction(scope.row)">
                   重置
                 </el-button>
-                <el-button
-                  type="danger"
-                  text
-                  icon="Delete"
-                  size="small"
-                  @click="deleteTeacherAction(scope.row)"
-                >
+                <el-button type="danger" text icon="Delete" size="small" @click="deleteAction(scope.row)">
                   删除
                 </el-button>
               </div>
@@ -590,7 +582,7 @@ function switchAction(id: number, active: boolean) {
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="formData.email" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="小组" prop="organizationId">
+        <el-form-item label="小组" prop="organizationId" required>
           <el-select
             v-model="formData.organizationId"
             placeholder="请选择小组，也可输入名称快速查找"

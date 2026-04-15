@@ -285,7 +285,7 @@ function handleBatchRemoveTeachers() {
 interface userDataModel {
   id: number
   nickname: string
-  email: string
+  email?: string
 }
 const userSelectModal = ref({
   title: "选择用户",

@@ -21,7 +21,7 @@ const layoutClasses = computed(() => {
   <div :class="layoutClasses" class="app-wrapper">
     <!-- 头部导航栏和标签栏 -->
     <div class="fixed-header layout-header">
-      <Logo v-if="showLogo" :collapse="false" class="logo" />
+      <Logo v-if="showLogo" :collapse="!appStore.sidebar.opened" class="logo" />
       <div class="content">
         <NavigationBar />
         <TagsView v-show="showTagsView" />
@@ -73,7 +73,7 @@ $transition-time: 0.35s;
 }
 
 .sidebar-container {
-  background-color: var(--el-menu-bg-color);
+  background-color: var(--v3-sidebar-menu-bg-color);
   transition: width $transition-time;
   width: var(--v3-sidebar-width);
   height: 100%;

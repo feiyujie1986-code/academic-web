@@ -2,16 +2,16 @@ import { request } from "@/http/axios_n"
 
 interface seniorTeacherData {
   nickname: string
-  // phone: string
   remark: string
-  email: string
+  email?: string
   active: boolean
   gender: number
   organizationId?: number
-  location?: string // 所在地，最大200字符
+  location?: string
 }
 
 export interface seniorTeacherDataModel extends seniorTeacherData, BaseModel {
+  username: string
   createdDate: string
   lastLoginDate: string
   lastLogin: number
@@ -54,8 +54,8 @@ export function deleteTeacherApi(data: CId) {
 }
 
 // 添加大使
-export function addTeacherApi(data: seniorTeacherData & { password: string }) {
-  return request<ApiResponseData<null>>({
+export function addTeacherApi(data: seniorTeacherData & { password?: string; username?: string }) {
+  return request<ApiResponseData<{ id: number } | null>>({
     url: "/v2/admin/senior-teachers",
     method: "post",
     data
@@ -72,11 +72,7 @@ export function editTeacherApi(data: seniorTeacherData & CId) {
 }
 
 // 重置大使密码
-interface reqResetPass {
-  password: string
-}
-
-export function resetPassApi(data: reqResetPass & CId) {
+export function resetPassApi(data: CId) {
   return request<ApiResponseData<null>>({
     url: "/v2/admin/senior-teachers/reset-password",
     method: "post",

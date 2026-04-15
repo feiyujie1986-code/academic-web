@@ -2,8 +2,7 @@ import { request } from "@/http/axios_n"
 
 interface userData {
   nickname: string
-  // phone: string
-  email: string
+  email?: string
   active: boolean
   gender: number
 }
@@ -15,6 +14,7 @@ interface roleData {
 }
 
 export interface userDataModel extends userData, BaseModel {
+  username: string
   roles: roleData[]
   createdDate: string
   userType: number
@@ -50,7 +50,7 @@ export function deleteUserApi(data: CId) {
 }
 
 // 添加用户
-export function addUserApi(data: userData & { password: string, roleIds: number[] }) {
+export function addUserApi(data: userData & { password?: string, username?: string, roleIds: number[] }) {
   return request<ApiResponseData<null>>({
     url: "/v2/admin/users",
     method: "post",

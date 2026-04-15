@@ -1,23 +1,23 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from "element-plus"
-import type { seniorTeacherDataModel } from "@/api/member/seniorTeacher"
+import type { NewStuModel } from "@/api/member/newStu"
 import type { OrganizationModel } from "@/api/organization/organization"
 import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
 import { useValidateEmail } from "@@/utils/useValidate"
 import { onMounted, reactive, ref } from "vue"
 import {
-  addTeacherApi,
-  deleteTeacherApi,
-  editTeacherApi,
-  getTeachersApi,
-  resetPassApi,
-  SwitchActiveApi
-} from "@/api/member/seniorTeacher"
+  addNewStudentApi,
+  deleteNewStudentApi,
+  editNewStudentApi,
+  getNewStudentsApi,
+  resetNewStudentPassApi,
+  switchNewStudentActiveApi
+} from "@/api/member/newStu"
 import { editOrganizationApi, getOrganizationsApi } from "@/api/organization/organization"
 
 defineOptions({
-  name: "SeniorTeacher"
+  name: "NewStu"
 })
 
 const loading = ref<boolean>(false)
@@ -59,13 +59,13 @@ function resetSearch() {
   searchFormData.organizationId = undefined
 }
 
-const tableData = ref<seniorTeacherDataModel[]>([])
-let activeRow: seniorTeacherDataModel
+const tableData = ref<NewStuModel[]>([])
+let activeRow: NewStuModel
 
 async function getTableData() {
   loading.value = true
   try {
-    const res = await getTeachersApi({
+    const res = await getNewStudentsApi({
       email: searchFormData.email || undefined,
       nickname: searchFormData.nickname || undefined,
       organizationId: searchFormData.organizationId,
@@ -74,6 +74,7 @@ async function getTableData() {
     })
     if (res.code === 0) {
       tableData.value = res.data.list.map((item) => {
+        // 后端返回秒级时间戳，* 1000 转毫秒后格式化
         item.createdDate = formatDateTime(item.createdAt * 1000, "YYYY-MM-DD")
         if (item.lastLogin > 0) item.lastLoginDate = formatDateTime(item.lastLogin * 1000)
         return item
@@ -88,14 +89,14 @@ async function getTableData() {
 getTableData()
 
 // 重置密码
-function resetPasswordAction(row: seniorTeacherDataModel) {
+function resetPasswordAction(row: NewStuModel) {
   ElMessageBox.confirm(`确定要重置「${row.nickname}」的密码吗？`, "重置密码", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning"
   })
     .then(() => {
-      resetPassApi({ id: row.id }).then((res) => {
+      resetNewStudentPassApi({ id: row.id }).then((res) => {
         if (res.code === 0) {
           ElMessage({ type: "success", message: res.msg })
         }
@@ -120,6 +121,7 @@ function initForm() {
 }
 
 const dialogVisible = ref<boolean>(false)
+
 function handleClose(done: () => void) {
   initForm()
   done()
@@ -183,7 +185,7 @@ const submitting = ref(false)
 function addDialog() {
   initForm()
   kind.value = "Add"
-  title.value = "新增长执"
+  title.value = "新增新人"
   dialogVisible.value = true
 }
 
@@ -200,7 +202,7 @@ function operateAction(formEl: FormInstance | undefined) {
       submitting.value = true
       try {
         if (kind.value === "Add") {
-          const res = await addTeacherApi({
+          const res = await addNewStudentApi({
             username: formData.username || undefined,
             nickname: formData.nickname,
             password: formData.password || undefined,
@@ -208,7 +210,7 @@ function operateAction(formEl: FormInstance | undefined) {
             email: formData.email,
             active: formData.active,
             gender: formData.gender,
-            organizationId: formData.organizationId,
+            organizationId: formData.organizationId
           })
           if (res.code === 0) {
             // 新建后设为组长
@@ -232,7 +234,7 @@ function operateAction(formEl: FormInstance | undefined) {
             getTableData()
           }
         } else if (kind.value === "Edit") {
-          const res = await editTeacherApi({
+          const res = await editNewStudentApi({
             id: activeRow.id,
             nickname: formData.nickname,
             remark: formData.remark,
@@ -254,15 +256,15 @@ function operateAction(formEl: FormInstance | undefined) {
   })
 }
 
-function deleteTeacherAction(row: seniorTeacherDataModel) {
-  ElMessageBox.confirm("此操作将永久删除该用户, 是否继续?", "提示", {
+function deleteAction(row: NewStuModel) {
+  ElMessageBox.confirm("此操作将永久删除该新人, 是否继续?", "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning"
   })
     .then(() => {
       const index = tableData.value.indexOf(row)
-      deleteTeacherApi({ id: row.id }).then((res) => {
+      deleteNewStudentApi({ id: row.id }).then((res) => {
         if (res.code === 0) {
           ElMessage({ type: "success", message: res.msg })
           tableData.value.splice(index, 1)
@@ -283,7 +285,7 @@ function handleCurrentChange(value: number) {
   getTableData()
 }
 
-function editDialog(row: seniorTeacherDataModel) {
+function editDialog(row: NewStuModel) {
   activeRow = row
   formData.username = row.username
   formData.nickname = row.nickname
@@ -293,7 +295,7 @@ function editDialog(row: seniorTeacherDataModel) {
   formData.gender = row.gender
   formData.organizationId = row.organizationId
   kind.value = "Edit"
-  title.value = "编辑大使"
+  title.value = "编辑新人"
   computeIsLeader()
   dialogVisible.value = true
 }
@@ -334,7 +336,7 @@ async function setLeaderForOrg(userId: number, nickname: string, orgId: number, 
 }
 
 // ----- 列表行组长 switch -----
-function isUserLeader(row: seniorTeacherDataModel): boolean {
+function isUserLeader(row: NewStuModel): boolean {
   if (!row.organizationId) return false
   const org = organizationList.value.find(o => o.id === row.organizationId)
   return org?.leaders?.some(l => l.userId === row.id) ?? false
@@ -342,9 +344,9 @@ function isUserLeader(row: seniorTeacherDataModel): boolean {
 
 const leaderLoadingIds = reactive(new Set<number>())
 
-async function handleListLeaderChange(row: seniorTeacherDataModel, val: boolean) {
+async function handleListLeaderChange(row: NewStuModel, val: boolean) {
   if (!row.organizationId) {
-    ElMessage.warning("该长执尚未分配小组，无法设为组长")
+    ElMessage.warning("该新人尚未分配小组，无法设为组长")
     return
   }
   leaderLoadingIds.add(row.id)
@@ -398,9 +400,9 @@ async function handleIsLeaderChange(val: boolean) {
   }
 }
 
-// 切换用户状态
+// 切换状态
 function switchAction(id: number, active: boolean) {
-  SwitchActiveApi({ id, active })
+  switchNewStudentActiveApi({ id, active })
     .then((res) => {
       if (res.code === 0) {
         if (active) {
@@ -509,21 +511,21 @@ function switchAction(id: number, active: boolean) {
           <el-table-column fixed="right" label="操作" align="center" width="240">
             <template #default="scope">
               <div style="white-space: nowrap">
-                <el-button type="primary" text icon="Edit" size="small" @click="editDialog(scope.row)">
-                  编辑
-                </el-button>
-                <el-button type="primary" text icon="Key" size="small" @click="resetPasswordAction(scope.row)">
-                  重置
-                </el-button>
-                <el-button
-                  type="danger"
-                  text
-                  icon="Delete"
-                  size="small"
-                  @click="deleteTeacherAction(scope.row)"
-                >
-                  删除
-                </el-button>
+              <el-button type="primary" text icon="Edit" size="small" @click="editDialog(scope.row)">
+                编辑
+              </el-button>
+              <el-button type="primary" text icon="Key" size="small" @click="resetPasswordAction(scope.row)">
+                重置
+              </el-button>
+              <el-button
+                type="danger"
+                text
+                icon="Delete"
+                size="small"
+                @click="deleteAction(scope.row)"
+              >
+                删除
+              </el-button>
               </div>
             </template>
           </el-table-column>
@@ -542,6 +544,7 @@ function switchAction(id: number, active: boolean) {
         />
       </div>
     </el-card>
+    <!-- 新增/编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="title" :before-close="handleClose" width="30%">
       <el-form
         ref="formRef"

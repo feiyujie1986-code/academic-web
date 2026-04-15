@@ -76,7 +76,7 @@ function toggleSidebar() {
     </el-scrollbar>
     <!-- 底部切换侧边栏按钮 -->
     <div v-if="!isTop" class="toggle-sidebar-btn" @click="toggleSidebar">
-      <el-icon :size="18" color="#666">
+      <el-icon :size="18" color="var(--v3-sidebar-menu-text-color)">
         <Fold v-if="appStore.sidebar.opened" />
         <Expand v-else />
       </el-icon>

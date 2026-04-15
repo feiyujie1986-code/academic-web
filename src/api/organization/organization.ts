@@ -1,10 +1,16 @@
 import { request } from "@/http/axios_n"
 
+export interface OrganizationLeader {
+  userId: number
+  nickname: string
+}
+
 /** 机构数据模型 */
 export interface OrganizationModel {
   id: number
   name: string
   remark: string
+  leaders: OrganizationLeader[]
   createdAt: number
   updatedAt: number
   createdDate?: string
@@ -25,6 +31,7 @@ interface EditOrganizationParams {
   id: number
   name: string
   remark?: string
+  leaderIds?: number[]
 }
 
 /** 获取机构列表参数 */

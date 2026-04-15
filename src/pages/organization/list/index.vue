@@ -58,7 +58,7 @@ async function getTableData() {
 }
 getTableData()
 
-// 添加、编辑机构对话框
+// 添加、编辑小组对话框
 const dialogVisible = ref<boolean>(false)
 const formRef = ref<FormInstance>()
 const formData = reactive({
@@ -67,7 +67,7 @@ const formData = reactive({
 })
 
 const formRules: FormRules = reactive({
-  name: [{ required: true, trigger: "blur", message: "请填写机构名称" }]
+  name: [{ required: true, trigger: "blur", message: "请填写小组名称" }]
 })
 
 const kind = ref("")
@@ -87,7 +87,7 @@ function handleClose(done: () => void) {
 
 function addDialog() {
   kind.value = "Add"
-  title.value = "新增机构"
+  title.value = "新增小组"
   dialogVisible.value = true
 }
 
@@ -96,7 +96,7 @@ function editDialog(row: OrganizationModel) {
   formData.name = row.name
   formData.remark = row.remark
   kind.value = "Edit"
-  title.value = "编辑机构"
+  title.value = "编辑小组"
   dialogVisible.value = true
 }
 
@@ -141,7 +141,7 @@ function operateAction(formEl: FormInstance | undefined) {
 }
 
 function deleteAction(row: OrganizationModel) {
-  ElMessageBox.confirm("此操作将永久删除该机构, 是否继续?", "提示", {
+  ElMessageBox.confirm("此操作将永久删除该小组, 是否继续?", "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning"
@@ -173,8 +173,8 @@ function handleCurrentChange(value: number) {
   <div class="app-container">
     <el-card shadow="never" class="search-wrapper">
       <el-form :inline="true" :model="searchFormData">
-        <el-form-item prop="name" label="机构名称">
-          <el-input v-model="searchFormData.name" placeholder="机构名称" clearable style="width: 200px" />
+        <el-form-item prop="name" label="小组名称">
+          <el-input v-model="searchFormData.name" placeholder="小组名称" clearable style="width: 200px" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleSearch">
@@ -202,7 +202,7 @@ function handleCurrentChange(value: number) {
       <div class="table-wrapper">
         <el-table :data="tableData">
           <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="name" label="机构名称" />
+          <el-table-column prop="name" label="小组名称" />
           <el-table-column prop="remark" label="备注" show-overflow-tooltip />
           <el-table-column prop="createdDate" label="创建时间" width="180" />
           <el-table-column prop="updatedDate" label="更新时间" width="180" />
@@ -240,11 +240,11 @@ function handleCurrentChange(value: number) {
         label-position="right"
         style="width: 95%; margin-top: 15px"
       >
-        <el-form-item label="机构名称" prop="name">
+        <el-form-item label="小组名称" prop="name">
           <el-input
             v-model="formData.name"
             autocomplete="off"
-            placeholder="请输入机构名称"
+            placeholder="请输入小组名称"
             maxlength="100"
             show-word-limit
           />

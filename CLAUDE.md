@@ -112,17 +112,7 @@ interface ApiResponseData<T> { code: number; data: T; msg: string }
 - 不执行 rm -rf 命令
 - 不修改 .env 文件
 
-## 个人喜好
-- 请用中文解释，但代码中的函数名保持英文风格，注释请写中文
 
-### Git 提交规范，遵循 Conventional Commits:
-- `feat: 新功能`
-- `fix: 修复 bug`
-- `docs: 文档更新`
-- `style: 代码格式调整`
-- `refactor: 代码重构`
-- `test: 测试相关`
-- `chore: 构建/工具链更新`
 
 <!-- OPENSPEC:START -->
 

@@ -60,7 +60,7 @@ export const useUserStore = defineStore("user", () => {
       // userInfo.username = res.data.nickname
       userInfo.nickname = res.data.nickname
       // userInfo.phone = res.data.phone
-      userInfo.email = res.data.email
+      userInfo.email = res.data.email ?? ""
       userInfo.roles = res.data.roles
       userInfo.gender = res.data.gender
       // userInfo.roleId = res.data.roleId

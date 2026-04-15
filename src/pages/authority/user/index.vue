@@ -10,9 +10,7 @@ import {
   deleteUserApi,
   editUserApi,
   getUsersApi,
-  modifyPassApi,
-  SwitchActiveApi,
-  SwitchSeniorTeacherApi
+  SwitchActiveApi
 } from "@/api/authority/user"
 
 defineOptions({
@@ -22,21 +20,16 @@ defineOptions({
 const loading = ref<boolean>(false)
 const { paginationData, changeCurrentPage, changePageSize } = usePagination()
 
-interface userListDataModel extends userDataModel {
-  userTypeStatus: boolean
-}
+type userListDataModel = userDataModel
 const tableData = ref<userListDataModel[]>([])
-let activeRow: userListDataModel
+let activeRow: userListDataModel | undefined
 
 async function getTableData() {
   loading.value = true
   try {
     const res = await getUsersApi({ page: paginationData.currentPage, pageSize: paginationData.pageSize })
     if (res.code === 0) {
-      tableData.value = res.data.list.map(item => ({
-        ...item,
-        userTypeStatus: item.userType === 9
-      }))
+      tableData.value = res.data.list
       paginationData.total = res.data.total
     }
   } catch (error) {
@@ -46,89 +39,13 @@ async function getTableData() {
 }
 getTableData()
 
-// 修改密码对话框
-const mpDialogVisible = ref<boolean>(false)
-
-const mpFormRef = ref<FormInstance>()
-
-const mpFormData = reactive({
-  oldPassword: "",
-  newPassword: "",
-  rePassword: ""
-})
-
-function mpInitForm() {
-  mpFormData.oldPassword = ""
-  mpFormData.newPassword = ""
-  mpFormData.rePassword = ""
-}
-
-function mpHandleClose(done: () => void) {
-  mpInitForm()
-  done()
-}
-
-function equalToPassword(_rule: any, value: any, callback: any) {
-  if (mpFormData.newPassword !== value) {
-    callback(new Error("两次输入的密码不一致"))
-  } else {
-    callback()
-  }
-}
-
-const mpFormRules: FormRules = reactive({
-  oldPassword: [{ required: true, trigger: "blur", message: "旧密码不能为空" }],
-  newPassword: [
-    { required: true, trigger: "blur", message: "新密码不能为空" },
-    { min: 6, max: 20, message: "长度在 6 到 20 个字符", trigger: "blur" }
-  ],
-  rePassword: [
-    { required: true, trigger: "blur", message: "确认密码不能为空" },
-    { required: true, validator: equalToPassword, trigger: "blur" }
-  ]
-})
-const mpSubmitting = ref(false)
-
-function mpCloseDialog() {
-  mpFormRef.value?.resetFields()
-  mpInitForm()
-  mpDialogVisible.value = false
-}
-
-function _modifyDialog(row: userListDataModel) {
-  activeRow = row
-  mpDialogVisible.value = true
-}
-
-function mpOperateAction(formEl: FormInstance | undefined) {
-  if (!formEl) return
-  formEl.validate(async (valid) => {
-    if (valid) {
-      mpSubmitting.value = true
-      try {
-        const res = await modifyPassApi({
-          id: activeRow.id,
-          oldPassword: mpFormData.oldPassword,
-          newPassword: mpFormData.newPassword
-        })
-        if (res.code === 0) {
-          ElMessage({ type: "success", message: res.msg })
-          mpCloseDialog()
-        }
-      } finally {
-        mpSubmitting.value = false
-      }
-    }
-  })
-}
-
-// 添加、编辑用户对话框
+// 添加、编辑账号对话框
 
 function initForm() {
   formRef.value?.resetFields()
+  formData.username = ""
   formData.nickname = ""
   formData.password = ""
-  formData.phone = ""
   formData.email = ""
   formData.active = true
   formData.gender = 1
@@ -143,10 +60,9 @@ function handleClose(done: () => void) {
 
 const formRef = ref<FormInstance>()
 const formData = reactive({
-  // username: "",
+  username: "",
   nickname: "",
   password: "",
-  phone: "",
   email: "",
   active: true,
   gender: 1,
@@ -182,15 +98,13 @@ function validatePassword(_rule: any, value: any, callback: any) {
 }
 
 const formRules: FormRules = reactive({
-  nickname: [{ trigger: "blur" }],
+  nickname: [{ required: true, trigger: "blur", message: "请填写昵称" }],
   password: [
     { required: true, trigger: "blur", message: "请填写密码" },
     { min: 8, max: 20, message: "密码长度应为 8 到 20 个字符", trigger: "blur" },
     { validator: validatePassword, trigger: "blur" }
   ],
-  // phone: [{ validator: useValidatePhone, trigger: "blur" }],
   email: [
-    { required: true, message: "请填写邮箱", trigger: "blur" },
     { validator: useValidateEmail, trigger: "blur" }
   ],
   roleId: [{ required: true, trigger: "change", message: "请选择角色" }]
@@ -214,16 +128,15 @@ function closeDialog() {
 function operateAction(formEl: FormInstance | undefined) {
   if (!formEl) return
   formEl.validate(async (valid) => {
-    // console.log(valid)
     if (valid) {
       submitting.value = true
       try {
         if (kind.value === "Add") {
           const res = await addUserApi({
             nickname: formData.nickname,
+            username: formData.username || undefined,
             password: formData.password,
-            // phone: formData.phone,
-            email: formData.email,
+            email: formData.email || undefined,
             active: formData.active,
             gender: formData.gender,
             roleIds: formData.roleId ? [formData.roleId] : []
@@ -232,12 +145,11 @@ function operateAction(formEl: FormInstance | undefined) {
             ElMessage({ type: "success", message: res.msg })
             getTableData()
           }
-        } else if (kind.value === "Edit") {
+        } else if (kind.value === "Edit" && activeRow) {
           const res = await editUserApi({
             id: activeRow.id,
             nickname: formData.nickname,
-            // phone: formData.phone,
-            email: formData.email,
+            email: formData.email || undefined,
             active: formData.active,
             gender: formData.gender,
             roleIds: formData.roleId ? [formData.roleId] : []
@@ -246,11 +158,7 @@ function operateAction(formEl: FormInstance | undefined) {
             ElMessage({ type: "success", message: res.msg })
             // 替换数据
             const index = tableData.value.indexOf(activeRow)
-            const userDataWithStatus = {
-              ...res.data,
-              userTypeStatus: res.data.userType === 9
-            }
-            tableData.value.splice(index, 1, userDataWithStatus)
+            tableData.value.splice(index, 1, res.data)
           }
         }
         closeDialog()
@@ -299,8 +207,7 @@ async function getRoleOption() {
   const res = await getRolesApi()
   if (res.code === 0) {
     res.data.forEach((element) => {
-      // 将identity为teacher、student、senior_teacher的role不显示
-      if (!["teacher", "student", "senior_teacher", "class_monitor", "org_staff", "backend_staff"].includes(element.identity)) {
+      if (["超级管理员", "牧长"].includes(element.roleName)) {
         roleOptions.push({ ID: String(element.id), roleName: element.roleName })
       }
     })
@@ -330,14 +237,14 @@ function getRoleTagStyle(roleName: string): Record<string, string> {
 
 function editDialog(row: userListDataModel) {
   activeRow = row
+  formData.username = row.username
   formData.nickname = row.nickname
-  // formData.phone = row.phone
-  formData.email = row.email
+  formData.email = row.email ?? ""
   formData.active = row.active
   formData.gender = row.gender
   formData.roleId = row.roles.length > 0 ? row.roles[0].id : undefined
   kind.value = "Edit"
-  title.value = "编辑用户"
+  title.value = "编辑账号"
   dialogVisible.value = true
 }
 
@@ -363,34 +270,6 @@ function switchAction(id: number, active: boolean) {
       if (row) row.active = !active
     })
 }
-// 切换用户类型（设置大使）
-function switchUserType(id: number, utype: number) {
-  const status = utype !== 9
-  SwitchSeniorTeacherApi({ id, status })
-    .then((res) => {
-      if (res.code === 0) {
-        if (status) {
-          ElMessage({ type: "success", message: "设置成功" })
-          // 更新 userType
-          const row = tableData.value.find(item => item.id === id)
-          if (row) row.userType = 9
-        } else {
-          ElMessage({ type: "success", message: "取消成功" })
-          const row = tableData.value.find(item => item.id === id)
-          if (row) row.userType = 0
-        }
-      } else {
-        // API 返回失败，回滚状态
-        const row = tableData.value.find(item => item.id === id)
-        if (row) row.userTypeStatus = !status
-      }
-    })
-    .catch(() => {
-      // 网络错误，回滚状态
-      const row = tableData.value.find(item => item.id === id)
-      if (row) row.userTypeStatus = !status
-    })
-}
 </script>
 
 <template>
@@ -411,9 +290,9 @@ function switchUserType(id: number, utype: number) {
       <div class="table-wrapper">
         <el-table :data="tableData">
           <el-table-column prop="id" label="ID" />
+          <el-table-column prop="username" label="账号" />
+          <el-table-column prop="nickname" label="昵称" />
           <el-table-column prop="email" label="邮箱" />
-          <el-table-column prop="nickname" label="姓名" />
-          <!-- <el-table-column prop="phone" label="手机号" /> -->
           <el-table-column prop="roles" label="角色">
             <template #default="scope">
               <el-tag
@@ -439,44 +318,30 @@ function switchUserType(id: number, utype: number) {
               />
             </template>
           </el-table-column>
-          <el-table-column prop="userTypeStatus" label="设置大使">
-            <template #default="scope">
-              <el-switch
-                v-model="scope.row.userTypeStatus"
-                inline-prompt
-                :active-value="true"
-                :inactive-value="false"
-                active-text="已设置"
-                inactive-text="未设置"
-                @change="switchUserType(scope.row.id, scope.row.userType)"
-              />
-            </template>
-          </el-table-column>
           <el-table-column fixed="right" label="操作" align="center" width="180">
             <template #default="scope">
-              <el-button
-                type="primary"
-                text
-                icon="Edit"
-                size="small"
-                :disabled="scope.row.id === 1"
-                @click="editDialog(scope.row)"
-              >
-                编辑
-              </el-button>
-              <!-- <el-button type="primary" text icon="Key" size="small" @click="modifyDialog(scope.row)">
-                修改密码
-              </el-button> -->
-              <el-button
-                type="danger"
-                text
-                icon="Delete"
-                size="small"
-                :disabled="scope.row.id === 1"
-                @click="deleteUserAction(scope.row)"
-              >
-                删除
-              </el-button>
+              <div style="white-space: nowrap">
+                <el-button
+                  type="primary"
+                  text
+                  icon="Edit"
+                  size="small"
+                  :disabled="scope.row.id === 1"
+                  @click="editDialog(scope.row)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  type="danger"
+                  text
+                  icon="Delete"
+                  size="small"
+                  :disabled="scope.row.id === 1"
+                  @click="deleteUserAction(scope.row)"
+                >
+                  删除
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -504,8 +369,16 @@ function switchUserType(id: number, utype: number) {
         style="width: 95%; margin-top: 15px"
         autocomplete="off"
       >
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="formData.email" autocomplete="new-email" :disabled="kind === 'Edit'" />
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="formData.nickname" autocomplete="off" />
+        </el-form-item>
+        <el-form-item label="账号" prop="username">
+          <el-input
+            v-model="formData.username"
+            autocomplete="off"
+            :disabled="kind === 'Edit'"
+            :placeholder="kind === 'Add' ? '如不填，默认通过昵称生成' : ''"
+          />
         </el-form-item>
         <el-form-item label="密码" prop="password" v-if="kind === 'Add'">
           <el-input
@@ -528,12 +401,13 @@ function switchUserType(id: number, utype: number) {
             </div>
           </div>
         </el-form-item>
-        <el-form-item label="用户名称" prop="nickname">
-          <el-input v-model="formData.nickname" autocomplete="off" />
+        <el-form-item label="邮箱" prop="email">
+          <el-input
+            v-model="formData.email"
+            autocomplete="new-email"
+            :disabled="kind === 'Edit' && !!activeRow?.email"
+          />
         </el-form-item>
-        <!-- <el-form-item label="手机号码" prop="phone">
-          <el-input v-model="formData.phone" autocomplete="off" />
-        </el-form-item> -->
         <el-form-item label="状态" prop="active">
           <el-switch v-model="formData.active" active-text="启用" inactive-text="禁用" />
         </el-form-item>
@@ -559,36 +433,6 @@ function switchUserType(id: number, utype: number) {
             取消
           </el-button>
           <el-button type="primary" :loading="submitting" @click="operateAction(formRef)">
-            确认
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-    <el-dialog v-model="mpDialogVisible" title="修改密码" :before-close="mpHandleClose" width="25%">
-      <el-form
-        ref="mpFormRef"
-        :model="mpFormData"
-        :rules="mpFormRules"
-        label-width="100px"
-        label-position="right"
-        style="width: 95%; margin-top: 15px"
-      >
-        <el-form-item label="旧密码" prop="oldPassword">
-          <el-input v-model="mpFormData.oldPassword" autocomplete="off" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="mpFormData.newPassword" autocomplete="off" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="确认密码" prop="rePassword">
-          <el-input v-model="mpFormData.rePassword" autocomplete="off" type="password" show-password />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="mpCloseDialog">
-            取消
-          </el-button>
-          <el-button type="primary" :loading="mpSubmitting" @click="mpOperateAction(mpFormRef)">
             确认
           </el-button>
         </div>

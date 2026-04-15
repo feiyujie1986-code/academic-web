@@ -10,7 +10,6 @@ import SelectUserModal from "../../components/SelectUserModal.vue"
 // Props定义
 interface Props {
   classId: number
-  organizationId?: number
 }
 const props = defineProps<Props>()
 // Emits定义
@@ -70,6 +69,11 @@ watch(
 function handleAddStudent() {
   userSelectModal.value.userType = "student"
   userSelectModal.value.selectedIds = students.value.map(item => item.userId)
+  userSelectModal.value.initialSelectedUsers = students.value.map(item => ({
+    id: item.userId,
+    nickname: item.nickname,
+    email: item.email
+  }))
   userSelectModal.value.visible = true
 }
 // 删除
@@ -205,7 +209,7 @@ const userSelectModal = ref({
   visible: false,
   userList: [] as userDataModel[],
   selectedIds: [] as number[],
-  selectedUserList: [] as userDataModel[],
+  initialSelectedUsers: [] as userDataModel[],
   userType: "student",
   minCount: 1,
   maxCount: 100
@@ -287,16 +291,16 @@ function handleUserSelectConfirm(selectUserIds: number[]) {
         </el-table>
       </div>
     </div>
-    <!-- 弹窗组件（使用服务端分页模式） -->
+    <!-- 弹窗组件（使用分组懒加载模式） -->
     <SelectUserModal
       v-model="userSelectModal.visible"
       :title="userSelectModal.title"
       :user-type="userSelectModal.userType"
       :selected-user-ids="userSelectModal.selectedIds"
+      :initial-selected-users="userSelectModal.initialSelectedUsers"
       :min-select-count="userSelectModal.minCount"
       :max-select-count="userSelectModal.maxCount"
-      :use-server-pagination="true"
-      :organization-id="props.organizationId"
+      :use-group-api="true"
       @confirm="handleUserSelectConfirm"
     />
   </div>

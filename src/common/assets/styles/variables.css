@@ -16,13 +16,13 @@
   /* Sidebar 组件（左侧模式全部生效、顶部模式全部不生效、混合模式非颜色部分生效） */
   --v3-sidebar-width: 200px;
   --v3-sidebar-hide-width: 58px;
-  --v3-sidebar-border-right: 1px solid var(--el-fill-color);
-  --v3-sidebar-menu-item-height: 60px;
-  --v3-sidebar-menu-tip-line-bg-color: var(--el-color-primary);
+  --v3-sidebar-border-right: 1px solid #ebebeb;
+  --v3-sidebar-menu-item-height: 46px;
+  --v3-sidebar-menu-tip-line-bg-color: transparent;
   --v3-sidebar-menu-bg-color: #ffffff;
-  --v3-sidebar-menu-hover-bg-color: #e3f7f7;
-  --v3-sidebar-menu-text-color: #37393b;
-  --v3-sidebar-menu-active-text-color: #409eff;
+  --v3-sidebar-menu-hover-bg-color: #f2f3f5;
+  --v3-sidebar-menu-text-color: #333333;
+  --v3-sidebar-menu-active-text-color: #1a1a1a;
   /* TagsView 组件 */
   --v3-tagsview-height: 34px;
   --v3-tagsview-text-color: var(--el-text-color-regular);

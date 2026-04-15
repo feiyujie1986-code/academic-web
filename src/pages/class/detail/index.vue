@@ -313,7 +313,6 @@ function handleUsersUpdated() {
           <ClassStudentTab
             v-if="loadedTabs.has('student')"
             :class-id="classId"
-            :organization-id="classInfo.organizationId"
             @update-student-count="handleUpdateStudentCount"
           />
         </el-tab-pane>

@@ -39,7 +39,7 @@ const { isTop } = useLayoutMode()
   }
   .layout-logo-text {
     vertical-align: middle;
-    width: 99ppx;
+    width: 99px;
     height: 24px;
   }
 }
@@ -51,8 +51,8 @@ const { isTop } = useLayoutMode()
 
 .collapse {
   .layout-logo {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     vertical-align: middle;
     display: inline-block;
   }

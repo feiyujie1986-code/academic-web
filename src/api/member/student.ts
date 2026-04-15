@@ -2,16 +2,16 @@ import { request } from "@/http/axios_n"
 
 interface studentData {
   nickname: string
-  // phone: string
   remark: string
-  email: string
+  email?: string
   active: boolean
   gender: number
   organizationId?: number
-  location?: string // 所在地，最大200字符
+  location?: string
 }
 
 export interface studentDataModel extends studentData, BaseModel {
+  username: string
   createdDate: string
   lastLoginDate: string
   lastLogin: number
@@ -54,8 +54,8 @@ export function deleteStudentApi(data: CId) {
 }
 
 // 添加学员
-export function addStudentApi(data: studentData & { password: string }) {
-  return request<ApiResponseData<null>>({
+export function addStudentApi(data: studentData & { password?: string; username?: string }) {
+  return request<ApiResponseData<{ id: number } | null>>({
     url: "/v2/admin/students",
     method: "post",
     data
@@ -72,11 +72,7 @@ export function editStudentApi(data: studentData & CId) {
 }
 
 // 重置学员密码
-interface reqResetPass {
-  password: string
-}
-
-export function resetPassApi(data: reqResetPass & CId) {
+export function resetPassApi(data: CId) {
   return request<ApiResponseData<null>>({
     url: "/v2/admin/students/reset-password",
     method: "post",
