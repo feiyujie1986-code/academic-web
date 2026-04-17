@@ -2,23 +2,23 @@ import { request } from "@/http/axios_n"
 
 // 社区类型
 export enum CommunityType {
-  Training = 1, // 培训社区
-  Cooperation = 2, // 合作社区
-  Employee = 3 // 员工社区
+  Training = 1, // 成长社区
+  Cooperation = 2, // 事工社区
+  Employee = 3 // 牧养社区
 }
 
 // 社区类型名称映射
 export const CommunityTypeLabels: Record<CommunityType, string> = {
-  [CommunityType.Training]: "培训社区",
-  [CommunityType.Cooperation]: "合作社区",
-  [CommunityType.Employee]: "员工社区"
+  [CommunityType.Training]: "成长社区",
+  [CommunityType.Cooperation]: "事工社区",
+  [CommunityType.Employee]: "牧养社区"
 }
 
 // 社区类型描述
 export const CommunityTypeDescriptions: Record<CommunityType, string> = {
-  [CommunityType.Training]: "面向学员的培训教学社区，不同合作机构间数据隔离",
-  [CommunityType.Cooperation]: "面向合作机构的交流社区，确保商业数据互不可见",
-  [CommunityType.Employee]: "面向内部员工的沟通社区，用于日常工作交流"
+  [CommunityType.Training]: "面向学员的成长教学社区",
+  [CommunityType.Cooperation]: "社区以协同为路径，赋能各事工的高效联动",
+  [CommunityType.Employee]: "内部家人沟通社区，彼此关怀、牧养陪伴，日常交流"
 }
 
 // 可见性
@@ -46,6 +46,7 @@ export interface CommunityModel {
   status: number
   createdAt: number
   updatedAt: number
+  classId: number | null // 关联班级ID，成长社区有值时表示由班级自动创建
 }
 
 // 社区列表响应
@@ -88,6 +89,7 @@ export interface CommunityMember {
   userRoleName: string
   nickname: string
   joinedAt: number
+  isOrgLeader: boolean
 }
 
 // 社区成员列表响应
@@ -279,6 +281,68 @@ export function getCommunityMemberCandidatesApi(communityId: number, params: {
 }) {
   return request<ApiResponseData<{ list: MemberCandidate[], total: number, page: number, pageSize: number }>>({
     url: `/v2/admin/im/communities/${communityId}/members/candidates`,
+    method: "get",
+    params
+  })
+}
+
+// ==================== 牧养社区候选人分组（专用） ====================
+
+// 候选人分组
+export interface CandidateGroup {
+  groupType: "org" | "role" | "admin"
+  groupId: number
+  groupName: string
+  count: number
+}
+
+// 候选人分组成员
+export interface CandidateGroupMember {
+  id: number
+  nickname: string
+  email: string
+  avatar: string
+  gender: number
+  active: boolean
+  userType: number
+  userTypeLabels: string[]
+  isOrgLeader: boolean
+  exists: boolean // 是否已在社区中
+}
+
+// 分组成员列表响应
+export interface CandidateGroupMembersData {
+  groupType: string
+  groupId: number
+  groupName: string
+  total: number
+  page: number
+  pageSize: number
+  members: CandidateGroupMember[]
+}
+
+// 获取候选人分组索引
+export function getCandidateGroupsApi(communityId: number, params: {
+  type: number
+  nickname?: string
+  email?: string
+}) {
+  return request<ApiResponseData<{ groups: CandidateGroup[] }>>({
+    url: `/v2/admin/im/communities/${communityId}/members/candidate-groups`,
+    method: "get",
+    params
+  })
+}
+
+// 获取候选人分组成员列表
+export function getCandidateGroupMembersApi(
+  communityId: number,
+  groupType: string,
+  groupId: number,
+  params: { type: number, nickname?: string, email?: string, page?: number, pageSize?: number }
+) {
+  return request<ApiResponseData<CandidateGroupMembersData>>({
+    url: `/v2/admin/im/communities/${communityId}/members/candidate-groups/${groupType}/${groupId}/members`,
     method: "get",
     params
   })

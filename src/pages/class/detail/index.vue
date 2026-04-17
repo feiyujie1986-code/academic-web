@@ -300,11 +300,10 @@ function handleUsersUpdated() {
         <el-tab-pane label="班级课程" name="course">
           <ClassCourseTab v-if="loadedTabs.has('course') && classId > 0" :class-id="classId" :users-updated-key="usersUpdatedKey" />
         </el-tab-pane>
-        <el-tab-pane label="班级大使/教师" name="teacher">
+        <el-tab-pane label="班级教师" name="teacher">
           <ClassTeacherTab
             v-if="loadedTabs.has('teacher')"
             :class-id="classId"
-            @update-senior-teacher-count="handleUpdateSeniorTeacheCount"
             @update-teacher-count="handleUpdateTeacherCount"
             @users-updated="handleUsersUpdated"
           />
@@ -361,26 +360,6 @@ function handleUsersUpdated() {
             style="width: 200px;"
             value-format="x"
           /> -->
-        </el-form-item>
-
-        <!-- 机构（创建后不可修改） -->
-        <el-form-item label="机构">
-          <el-select
-            v-model="editForm.organizationId"
-            disabled
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in organizationList"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </el-select>
-          <div class="form-item-tip">
-            <el-icon><InfoFilled /></el-icon>
-            <span>班级创建后机构不可修改</span>
-          </div>
         </el-form-item>
 
         <el-form-item label="备注：" prop="remark">

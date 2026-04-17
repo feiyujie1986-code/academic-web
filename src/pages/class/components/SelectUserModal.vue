@@ -3,6 +3,7 @@ import { reactive, ref, watch } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import type { GroupMember, MemberGroup } from "@/api/member/memberGroup"
 import { getMemberGroupMembersApi, getMemberGroupsApi } from "@/api/member/memberGroup"
+import { getUserTypeLabelStyle } from "@@/utils/userTypeLabel"
 
 interface UserItem {
   id: number
@@ -338,7 +339,16 @@ function handleClose() {
                               <div class="member-name-row">
                                 <span class="member-name">{{ member.nickname }}</span>
                                 <span v-if="member.isOrgLeader" class="user-type-tag leader-tag">组长</span>
-                                <span v-for="label in member.userTypeLabels" :key="label" class="user-type-tag">{{ label }}</span>
+                                <span
+                                  v-for="label in member.userTypeLabels"
+                                  :key="label"
+                                  class="user-type-tag"
+                                  :style="{
+                                    color: getUserTypeLabelStyle(label).color,
+                                    background: getUserTypeLabelStyle(label).background,
+                                    borderColor: getUserTypeLabelStyle(label).border
+                                  }"
+                                >{{ label }}</span>
                               </div>
                               <span class="member-email">{{ member.email }}</span>
                             </div>
@@ -398,7 +408,16 @@ function handleClose() {
                               <div class="member-name-row">
                                 <span class="member-name">{{ member.nickname }}</span>
                                 <span v-if="member.isOrgLeader" class="user-type-tag leader-tag">组长</span>
-                                <span v-for="label in member.userTypeLabels" :key="label" class="user-type-tag">{{ label }}</span>
+                                <span
+                                  v-for="label in member.userTypeLabels"
+                                  :key="label"
+                                  class="user-type-tag"
+                                  :style="{
+                                    color: getUserTypeLabelStyle(label).color,
+                                    background: getUserTypeLabelStyle(label).background,
+                                    borderColor: getUserTypeLabelStyle(label).border
+                                  }"
+                                >{{ label }}</span>
                               </div>
                               <span class="member-email">{{ member.email }}</span>
                             </div>

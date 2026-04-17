@@ -672,12 +672,6 @@ async function handleOk() {
   }
 
   if (props.classId !== null) { // 班级排课才有人员和时间安排
-    // 校验人员配置：大使必选，教师选填
-    if (!formState.seniorTeacherId) {
-      ElMessage.error("请选择大使")
-      return
-    }
-
     if (formState.lessonType === LessonType.Live || formState.lessonType === LessonType.Discuss) {
     // 直播和讨论课使用startTime
       if (!formState.startTime) {
@@ -755,8 +749,6 @@ function toggleEditorFullscreen() {
 
 // 字段可见性计算属性
 const fieldVisibility = computed(() => ({
-  // 人员配置中的大使选择器 - 所有课型都显示
-  seniorTeacher: true,
   // 时间选择器类型 - 直播和讨论课用datetime，其他用daterange
   useDateTimePicker: formState.lessonType === LessonType.Live || formState.lessonType === LessonType.Discuss,
   // 时长字段 - 仅直播和讨论课显示
@@ -827,13 +819,6 @@ const dynamicLabels = computed(() => ({
         <el-input v-model="formState.name" placeholder="请填写课节名称" maxlength="100" show-word-limit clearable />
       </el-form-item>
 
-      <el-form-item v-if="classId !== null && fieldVisibility.seniorTeacher" label="大使" required>
-        <el-select v-model="formState.seniorTeacherId" placeholder="请选择大使" filterable class="personnel-select">
-          <el-option v-for="teacher in props.seniorTeachers" :key="teacher.userId" :label="teacher.nickname" :value="teacher.userId">
-            {{ teacher.nickname }}
-          </el-option>
-        </el-select>
-      </el-form-item>
       <el-form-item v-if="classId !== null" label="教师">
         <el-select v-model="formState.teacherId" placeholder="请选择教师" filterable clearable class="personnel-select">
           <el-option v-for="teacher in props.teachers" :key="teacher.userId" :label="teacher.nickname" :value="teacher.userId">

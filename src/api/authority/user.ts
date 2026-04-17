@@ -114,6 +114,7 @@ export interface UserCandidate {
   email: string
   avatar: string
   active: boolean
+  isGroupLeader: boolean // 是否为小组长
   roles: RoleInfo[]
 }
 
@@ -125,7 +126,9 @@ export interface UserCandidateListData {
 
 // 获取用户候选列表参数
 export interface GetUserCandidatesParams {
-  roleIds?: string // 角色ID列表，逗号分隔
+  roleIds?: string // 角色ID列表，逗号分隔，如 "2,3"
+  userType?: number // user_type 位掩码，如 16=事工同工
+  isGroupLeader?: boolean // true=只返回小组长
   page?: number
   pageSize?: number
 }

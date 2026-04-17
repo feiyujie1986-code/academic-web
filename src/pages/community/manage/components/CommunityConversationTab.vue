@@ -6,6 +6,7 @@ import conversationsIcon from "@@/assets/images/conversations-icon.png"
 import qiyongzhongIcon from "@@/assets/images/qiyongzhong.png"
 import yiguidangIcon from "@@/assets/images/yiguidang.png"
 import { formatDateTime } from "@@/utils/datetime"
+import { getUserTypeLabelCssStyle } from "@@/utils/userTypeLabel"
 import { ElMessage, ElMessageBox } from "element-plus"
 
 import { computed, onMounted, reactive, ref, watch } from "vue"
@@ -36,7 +37,7 @@ const loading = ref(false)
 const conversations = ref<ConversationModel[]>([])
 const total = ref(0)
 
-// 是否可以管理群组（员工社区和合作社区可以创建/编辑/归档群组）
+// 是否可以管理群组（牧养社区和事工社区可以创建/编辑/归档群组）
 const canManageGroup = computed(() =>
   props.communityType === CommunityType.Employee || props.communityType === CommunityType.Cooperation
 )
@@ -146,14 +147,9 @@ async function fetchCandidates() {
         avatar: m.userAvatar,
         email: "",
         userRole: m.userRole,
-        roleName: m.userRoleName
+        roleName: m.userRoleName,
+        isOrgLeader: m.isOrgLeader
       }))
-      // 自动选中受保护角色（super_admin、admin）
-      candidates.value.forEach((candidate) => {
-        if (isProtectedRole(candidate.userRole) && !selectedMembers.value.some(u => u.userId === candidate.userId)) {
-          selectedMembers.value.push(candidate)
-        }
-      })
     }
   } catch (err) {
     console.error("获取社区成员列表失败", err)
@@ -193,11 +189,6 @@ function handleSearch() {
   fetchCandidates()
 }
 
-// 判断是否为受保护角色（超级管理员和管理员不可取消）
-function isProtectedRole(userRole: string): boolean {
-  return userRole === "super_admin" || userRole === "admin"
-}
-
 // 检查是否已选中
 function isSelected(userId: number): boolean {
   return selectedMembers.value.some(u => u.userId === userId)
@@ -205,9 +196,6 @@ function isSelected(userId: number): boolean {
 
 // 切换选中状态
 function toggleSelect(candidate: ConversationMemberCandidate) {
-  // 受保护角色不允许取消选中
-  if (isProtectedRole(candidate.userRole)) return
-
   const index = selectedMembers.value.findIndex(u => u.userId === candidate.userId)
   if (index > -1) {
     selectedMembers.value.splice(index, 1)
@@ -218,19 +206,15 @@ function toggleSelect(candidate: ConversationMemberCandidate) {
 
 // 移除已选人员
 function removeSelected(userId: number) {
-  const member = selectedMembers.value.find(u => u.userId === userId)
-  // 受保护角色不允许移除
-  if (member && isProtectedRole(member.userRole)) return
-
   const index = selectedMembers.value.findIndex(u => u.userId === userId)
   if (index > -1) {
     selectedMembers.value.splice(index, 1)
   }
 }
 
-// 全部移除（保留受保护角色）
+// 全部移除
 function clearSelected() {
-  selectedMembers.value = selectedMembers.value.filter(u => isProtectedRole(u.userRole))
+  selectedMembers.value = []
 }
 
 // 默认头像
@@ -238,21 +222,6 @@ function getAvatarUrl(avatar: string): string {
   return avatar || "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png"
 }
 
-// 角色标签样式映射（浅色背景 + 彩色文字）
-function getRoleTagStyle(roleName: string): Record<string, string> {
-  const styleMap: Record<string, { bg: string, color: string }> = {
-    管理员: { bg: "#FFF3E0", color: "#FF9500" },
-    大使长: { bg: "#F3E8FF", color: "#B385DB" },
-    大使: { bg: "#E8F5E9", color: "#4CAF50" },
-    教师: { bg: "#E3F2FD", color: "#409EFF" }
-  }
-  const style = styleMap[roleName] || { bg: "#F5F5F5", color: "#909399" }
-  return {
-    backgroundColor: style.bg,
-    color: style.color,
-    borderColor: style.bg
-  }
-}
 
 // 保存群组
 async function handleSave() {
@@ -379,10 +348,10 @@ watch(() => props.communityId, () => {
       </el-button>
     </div>
 
-    <!-- 提示信息（仅培训社区显示） -->
+    <!-- 提示信息（仅成长社区显示） -->
     <div v-if="!canManageGroup" class="tip-info">
       <el-icon><InfoFilled /></el-icon>
-      <span>培训社区群组由系统根据班级创建，无法手动添加</span>
+      <span>成长社区群组由系统根据班级创建，无法手动添加</span>
     </div>
 
     <!-- 群组列表 -->
@@ -435,7 +404,7 @@ watch(() => props.communityId, () => {
     <el-dialog
       v-model="dialogVisible"
       :title="dialogMode === 'create' ? '创建群组' : '编辑群组'"
-      width="700px"
+      width="900px"
       :close-on-click-modal="false"
     >
       <el-form label-width="100px" class="group-form">
@@ -479,20 +448,26 @@ watch(() => props.communityId, () => {
                   v-for="candidate in candidates"
                   :key="candidate.userId"
                   class="candidate-item"
-                  :class="{ 'is-disabled': isProtectedRole(candidate.userRole) }"
                   @click="toggleSelect(candidate)"
                 >
                   <el-checkbox
                     :model-value="isSelected(candidate.userId)"
-                    :disabled="isProtectedRole(candidate.userRole)"
                     @click.stop
                     @change="toggleSelect(candidate)"
                   />
                   <el-avatar :size="32" :src="getAvatarUrl(candidate.avatar)" />
                   <span class="candidate-name">{{ candidate.nickname }}</span>
                   <el-tag
+                    v-if="candidate.isOrgLeader"
+                    size="small"
+                    class="candidate-role"
+                    :style="{ backgroundColor: '#e8f5e8', color: '#52c41a', borderColor: '#b7eb8f' }"
+                  >
+                    组长
+                  </el-tag>
+                  <el-tag
                     v-if="candidate.roleName"
-                    :style="getRoleTagStyle(candidate.roleName)"
+                    :style="getUserTypeLabelCssStyle(candidate.roleName)"
                     size="small"
                     class="candidate-role"
                   >
@@ -520,14 +495,22 @@ watch(() => props.communityId, () => {
                   <el-avatar :size="32" :src="getAvatarUrl(member.avatar)" />
                   <span class="selected-name">{{ member.nickname }}</span>
                   <el-tag
+                    v-if="member.isOrgLeader"
+                    size="small"
+                    class="selected-role"
+                    :style="{ backgroundColor: '#e8f5e8', color: '#52c41a', borderColor: '#b7eb8f' }"
+                  >
+                    组长
+                  </el-tag>
+                  <el-tag
                     v-if="member.roleName"
-                    :style="getRoleTagStyle(member.roleName)"
+                    :style="getUserTypeLabelCssStyle(member.roleName)"
                     size="small"
                     class="selected-role"
                   >
                     {{ member.roleName }}
                   </el-tag>
-                  <el-icon v-if="!isProtectedRole(member.userRole)" class="remove-icon" @click="removeSelected(member.userId)">
+                  <el-icon class="remove-icon" @click="removeSelected(member.userId)">
                     <Close />
                   </el-icon>
                 </div>
@@ -746,7 +729,7 @@ watch(() => props.communityId, () => {
 }
 
 .selected-panel {
-  width: 220px;
+  width: 420px;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--el-border-color-lighter);

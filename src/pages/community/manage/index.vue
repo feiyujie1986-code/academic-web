@@ -1,11 +1,10 @@
 <script lang="ts" setup>
 import type { CommunityModel, CommunityStatistics } from "@/api/im/community"
-import type { OrganizationModel } from "@/api/organization/organization"
 import cooperativeHeaderBg from "@@/assets/images/cooperative-community-head-back.png"
 import staffHeaderBg from "@@/assets/images/Staff-community-head-back.png"
 import trainingHeaderBg from "@@/assets/images/training-community-header-back.png"
 import { formatDateTime } from "@@/utils/datetime"
-import { ElMessage } from "element-plus"
+import { ElMessage, ElMessageBox } from "element-plus"
 import { computed, onMounted, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import {
@@ -13,11 +12,11 @@ import {
   CommunityTypeDescriptions,
   CommunityTypeLabels,
   createCommunityApi,
+  deleteCommunityApi,
   getCommunitiesApi,
   getCommunityStatisticsApi,
   updateCommunityApi
 } from "@/api/im/community"
-import { getOrganizationsApi } from "@/api/organization/organization"
 import CommunityConversationTab from "./components/CommunityConversationTab.vue"
 import CommunityMemberTab from "./components/CommunityMemberTab.vue"
 
@@ -78,23 +77,21 @@ const isCooperationType = computed(() => communityType.value === CommunityType.C
 // 是否为员工社区
 const isEmployeeType = computed(() => communityType.value === CommunityType.Employee)
 
-// 是否可以创建亚社区（仅员工社区）
-const canCreateCommunity = computed(() => isEmployeeType.value)
+// 是否可以创建亚社区（事工社区和员工社区）
+const canCreateCommunity = computed(() => isCooperationType.value || isEmployeeType.value)
 
 // 对话框提示信息
 const dialogTipText = computed(() => {
   if (isCooperationType.value) {
-    return "面向合作机构的交流社区，确保商业数据互不可见"
+    return "赋能各事工的高效联动，用于事工交流"
   }
-  return "面向内部员工的沟通社区，用于日常工作交流"
+  return "面向内部的沟通社区，用于日常工作交流"
 })
 
 // 创建亚社区对话框
 const createDialogVisible = ref(false)
 const createLoading = ref(false)
-const organizations = ref<OrganizationModel[]>([])
 const createForm = reactive({
-  orgId: undefined as number | undefined,
   name: "",
   description: ""
 })
@@ -108,36 +105,14 @@ const editForm = reactive({
 })
 
 // 打开创建对话框
-async function openCreateDialog() {
-  createForm.orgId = undefined
+function openCreateDialog() {
   createForm.name = ""
   createForm.description = ""
   createDialogVisible.value = true
-  // 仅合作社区需要获取机构列表
-  if (isCooperationType.value) {
-    await fetchOrganizations()
-  }
-}
-
-// 获取机构列表
-async function fetchOrganizations() {
-  try {
-    const res = await getOrganizationsApi({ page: 1, pageSize: 100 })
-    if (res.code === 0 && res.data) {
-      organizations.value = res.data.list
-    }
-  } catch (err) {
-    console.error("获取机构列表失败", err)
-  }
 }
 
 // 创建亚社区
 async function handleCreateCommunity() {
-  // 合作社区需要选择机构
-  if (isCooperationType.value && !createForm.orgId) {
-    ElMessage.warning("请选择合作机构")
-    return
-  }
   if (!createForm.name.trim()) {
     ElMessage.warning("请输入亚社区名称")
     return
@@ -145,7 +120,6 @@ async function handleCreateCommunity() {
   createLoading.value = true
   try {
     const res = await createCommunityApi({
-      orgId: isCooperationType.value ? createForm.orgId! : undefined,
       name: createForm.name.trim(),
       description: createForm.description.trim(),
       type: communityType.value
@@ -193,6 +167,45 @@ async function handleEditCommunity() {
     console.error("编辑亚社区失败", err)
   } finally {
     editLoading.value = false
+  }
+}
+
+// 删除亚社区
+const deleteLoading = ref(false)
+
+async function handleDeleteCommunity() {
+  if (!selectedCommunity.value) return
+  const community = selectedCommunity.value
+  const tipMessage = community.classId != null
+    ? "删除亚社区不会同步删除班级，班级变更会同步创建新的亚社区。<br/>此操作不可撤销。"
+    : "删除后社区及群组将全部移除，此操作不可撤销。"
+
+  try {
+    await ElMessageBox.confirm(tipMessage, "确认删除亚社区？", {
+      type: "warning",
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      confirmButtonClass: "el-button--danger"
+    })
+  } catch {
+    return // 用户取消
+  }
+
+  deleteLoading.value = true
+  try {
+    const res = await deleteCommunityApi(community.id)
+    if (res.code === 0) {
+      ElMessage.success("删除成功")
+      selectedCommunityId.value = null
+      fetchCommunities()
+      fetchStatistics()
+    }
+  } catch (err) {
+    console.error("删除亚社区失败", err)
+    ElMessage.error("删除失败")
+  } finally {
+    deleteLoading.value = false
   }
 }
 
@@ -411,7 +424,7 @@ onMounted(() => {
           <div class="detail-header">
             <div class="header-main">
               <div class="header-icon">
-                <span class="icon-text">新</span>
+                <span class="icon-text">{{ selectedCommunity.name.charAt(0) }}</span>
               </div>
               <div class="header-info">
                 <h2 class="detail-title">
@@ -424,6 +437,15 @@ onMounted(() => {
             </div>
             <el-button v-if="isEmployeeType" plain @click="openEditDialog">
               编辑
+            </el-button>
+            <el-button
+              v-if="!isEmployeeType && !isCooperationType"
+              type="danger"
+              plain
+              :loading="deleteLoading"
+              @click="handleDeleteCommunity"
+            >
+              删除
             </el-button>
             <el-tag v-if="isNewCommunity(selectedCommunity.createdAt)" type="success" size="small" class="new-tag">
               新
@@ -469,17 +491,6 @@ onMounted(() => {
       </div>
 
       <el-form label-width="100px" class="create-form">
-        <!-- 合作社区需要选择机构 -->
-        <el-form-item v-if="isCooperationType" label="合作机构" required>
-          <el-select v-model="createForm.orgId" placeholder="请选择" style="width: 100%">
-            <el-option
-              v-for="org in organizations"
-              :key="org.id"
-              :label="org.name"
-              :value="org.id"
-            />
-          </el-select>
-        </el-form-item>
         <el-form-item label="亚社区名称" required>
           <el-input v-model="createForm.name" placeholder="请输入" maxlength="50" show-word-limit />
         </el-form-item>

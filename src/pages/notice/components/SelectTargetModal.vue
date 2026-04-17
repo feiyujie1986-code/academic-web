@@ -75,6 +75,7 @@ export interface SelectedItem {
   count?: number // 人数（班级/社区用）
   avatar?: string // 头像（人员用）
   roles?: RoleInfo[] // 角色列表（人员用）
+  isGroupLeader?: boolean // 是否为小组长（人员用）
 }
 
 // Props
@@ -129,6 +130,9 @@ const roleList = ref<roleDataModel[]>([])
 const selectedRoleIds = ref<number[]>([])
 const roleLoading = ref(false)
 
+// 小组长对应的 roleId，选中时转为 isGroupLeader=true 查询
+const GROUP_LEADER_ROLE_ID = 8
+
 // 获取角色列表
 async function fetchRoles() {
   roleLoading.value = true
@@ -148,6 +152,7 @@ async function fetchRoles() {
 function handleRoleChange() {
   fetchCandidates()
 }
+
 
 // 获取角色标签样式（参考社区中心人员管理）
 function getRoleTagStyle(roleName: string): Record<string, string> {
@@ -213,13 +218,18 @@ async function fetchCandidates() {
 
     switch (props.targetType) {
       case "user": {
-        // 使用新的用户候选列表 API，支持角色筛选
-        const params: { roleIds?: string, page: number, pageSize: number } = {
+        const params: Parameters<typeof getUserCandidatesApi>[0] = {
           page: 1,
           pageSize: 1000
         }
-        if (selectedRoleIds.value.length > 0) {
-          params.roleIds = selectedRoleIds.value.join(",")
+        // role 8（小组长）不走 roleIds，转为 isGroupLeader=true
+        const otherRoleIds = selectedRoleIds.value.filter(id => id !== GROUP_LEADER_ROLE_ID)
+        const hasGroupLeader = selectedRoleIds.value.includes(GROUP_LEADER_ROLE_ID)
+        if (otherRoleIds.length > 0) {
+          params.roleIds = otherRoleIds.join(",")
+        }
+        if (hasGroupLeader) {
+          params.isGroupLeader = true
         }
         const res = await getUserCandidatesApi(params)
         if (res.code === 0) {
@@ -227,7 +237,8 @@ async function fetchCandidates() {
             id: item.id,
             name: item.nickname || item.email || `用户${item.id}`,
             avatar: item.avatar || "",
-            roles: item.roles || []
+            roles: item.roles || [],
+            isGroupLeader: item.isGroupLeader
           }))
         }
         break
@@ -407,7 +418,15 @@ const totalCountText = computed(() => {
               <span class="item-name">{{ item.name }}</span>
             </el-tooltip>
             <!-- 角色标签（仅用户类型显示） -->
-            <template v-if="targetType === 'user' && item.roles && item.roles.length > 0">
+            <template v-if="targetType === 'user'">
+              <el-tag
+                v-if="item.isGroupLeader"
+                size="small"
+                class="role-tag"
+                :style="{ backgroundColor: '#e8f4ff', color: '#1677ff', borderColor: '#bae0ff' }"
+              >
+                小组长
+              </el-tag>
               <el-tag
                 v-for="role in item.roles"
                 :key="role.roleId"

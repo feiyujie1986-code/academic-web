@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from "element-plus"
 import type { OrganizationModel } from "@/api/organization/organization"
+import type { GroupMember } from "@/api/member/memberGroup"
 import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
 import { reactive, ref } from "vue"
@@ -10,6 +11,8 @@ import {
   editOrganizationApi,
   getOrganizationsApi
 } from "@/api/organization/organization"
+import { getMemberGroupMembersApi } from "@/api/member/memberGroup"
+import { getUserTypeLabelStyle } from "@@/utils/userTypeLabel"
 
 defineOptions({
   name: "OrganizationList"
@@ -157,6 +160,27 @@ function deleteAction(row: OrganizationModel) {
     .catch(() => {})
 }
 
+// 查看小组成员对话框
+const membersDialogVisible = ref(false)
+const membersDialogTitle = ref("")
+const membersLoading = ref(false)
+const membersList = ref<GroupMember[]>([])
+
+async function handleGroupNameClick(row: OrganizationModel) {
+  membersDialogTitle.value = row.name
+  membersDialogVisible.value = true
+  membersLoading.value = true
+  membersList.value = []
+  try {
+    const res = await getMemberGroupMembersApi("org", row.id, { page: 1, pageSize: 20 })
+    if (res.code === 0) {
+      membersList.value = res.data.members
+    }
+  } finally {
+    membersLoading.value = false
+  }
+}
+
 // 分页
 function handleSizeChange(value: number) {
   changePageSize(value)
@@ -202,7 +226,13 @@ function handleCurrentChange(value: number) {
       <div class="table-wrapper">
         <el-table :data="tableData">
           <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="name" label="小组名称" />
+          <el-table-column prop="name" label="小组名称">
+            <template #default="scope">
+              <el-link type="primary" @click="handleGroupNameClick(scope.row)">
+                {{ scope.row.name }}
+              </el-link>
+            </template>
+          </el-table-column>
           <el-table-column prop="remark" label="备注" show-overflow-tooltip />
           <el-table-column prop="createdDate" label="创建时间" width="180" />
           <el-table-column prop="updatedDate" label="更新时间" width="180" />
@@ -231,6 +261,47 @@ function handleCurrentChange(value: number) {
         />
       </div>
     </el-card>
+    <!-- 小组成员弹窗 -->
+    <el-dialog v-model="membersDialogVisible" width="400px">
+      <template #header>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span style="font-size: 16px; font-weight: 600; color: #303133">{{ membersDialogTitle }}</span>
+          <el-tag type="danger" size="small" style="border-radius: 4px; font-weight: 500">成员</el-tag>
+        </div>
+      </template>
+      <div v-loading="membersLoading" style="min-height: 60px">
+        <template v-if="!membersLoading && membersList.length === 0">
+          <el-empty description="暂无成员" :image-size="60" />
+        </template>
+        <template v-else>
+          <div
+            v-for="(member, index) in membersList"
+            :key="member.id"
+          >
+            <div style="padding: 12px 0">
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px">
+                <span style="font-size: 15px; font-weight: 500; color: #1a1a1a">{{ member.nickname }}</span>
+                <el-tag v-if="member.isOrgLeader" type="success" size="small" style="border-radius: 4px">组长</el-tag>
+                <el-tag
+                  v-for="label in member.userTypeLabels"
+                  :key="label"
+                  size="small"
+                  :style="{
+                    borderRadius: '4px',
+                    color: getUserTypeLabelStyle(label).color,
+                    background: getUserTypeLabelStyle(label).background,
+                    borderColor: getUserTypeLabelStyle(label).border
+                  }"
+                >{{ label }}</el-tag>
+              </div>
+              <div style="font-size: 13px; color: #999">{{ member.email }}</div>
+            </div>
+            <el-divider v-if="index < membersList.length - 1" style="margin: 0" />
+          </div>
+        </template>
+      </div>
+    </el-dialog>
+
     <el-dialog v-model="dialogVisible" :title="title" :before-close="handleClose" width="30%">
       <el-form
         ref="formRef"

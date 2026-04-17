@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { CommunityStatistics } from "@/api/im/community"
-import communityBg from "@@/assets/images/back- community-list.png"
 import subCommunityIcon from "@@/assets/images/sub-community-icon-new.png"
 import { onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
@@ -74,16 +73,13 @@ onMounted(() => {
 
 <template>
   <div class="community-settings">
-    <!-- 背景装饰图 -->
-    <img :src="communityBg" alt="" class="bg-decoration">
-
     <!-- 页面头部 -->
     <div class="page-header">
       <h1 class="page-title">
         社区管理
       </h1>
       <p class="page-description">
-        系统预设了三个固定社区，每个社区有不同的业务定位和数据隔离策略，点击下方卡片进入亚社区管理。
+        系统预设了三个社区，每个社区有不同的业务定位，点击下方卡片进入亚社区管理。
       </p>
     </div>
 

@@ -16,8 +16,9 @@ export interface AuthorizationResponse {
 export interface UserAuthorizationItem {
   userId: number
   nickname: string
+  username: string
   email: string
-  userType: 1 | 2 | 4 | 8 | 16 // 1-内部人员 2-学员 4-教师 8-大使 16-机构同工
+  userType: 1 | 2 | 4 | 8 | 16 | 32 // 1-内部人员 2-学员 4-教师 8-长执 16-机构同工 32-新人
   userTypeName: string
   authorized: boolean
   organizationId?: number // 所属合作机构ID（机构同工类型有值）
@@ -29,6 +30,52 @@ export interface UserAuthorizationListData {
   total: number
   page: number
   pageSize: number
+}
+
+// 组长授权项（一条记录 = 一个组长 × 一个小组）
+export interface LeaderAuthorizationItem {
+  userId: number
+  username: string
+  nickname: string
+  orgId: number
+  orgName: string
+  authorized: boolean
+}
+
+export interface LeaderAuthorizationListData {
+  list: LeaderAuthorizationItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface GetLeaderAuthorizationsReq {
+  page?: number
+  pageSize?: number
+  status?: "authorized" | "unauthorized" | ""
+  keyword?: string // 昵称或账号模糊搜索
+}
+
+// 小组授权项
+export interface OrgAuthorizationItem {
+  orgId: number
+  orgName: string
+  memberCount: number
+  authorized: boolean
+}
+
+export interface OrgAuthorizationListData {
+  list: OrgAuthorizationItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface GetOrgAuthorizationsReq {
+  page?: number
+  pageSize?: number
+  status?: "authorized" | "unauthorized" | ""
+  keyword?: string // 小组名称关键字
 }
 
 // 班级授权项
@@ -65,7 +112,7 @@ export interface AuthorizationTargetListData {
 // ==================== Request Types ====================
 
 export interface AddAuthorizationReq {
-  authType: 1 | 2 // 1-用户 2-班级
+  authType: 1 | 2 | 3 // 1-用户 2-班级 3-小组
   targetIds: number[]
 }
 
@@ -83,7 +130,9 @@ export interface GetUserAuthorizationsReq {
   pageSize?: number
   status?: "authorized" | "unauthorized" | "" // 授权状态筛选
   keyword?: string // 姓名或邮箱关键字
-  userType?: 1 | 2 | 4 | 8 | 16 // 用户类型：1-内部人员 2-学员 4-教师 8-大使 16-机构同工
+  userType?: 1 | 2 | 4 | 8 | 16 | 32 // 用户类型：1-内部人员 2-学员 4-教师 8-长执 16-机构同工 32-新人
+  isOrgLeader?: boolean // 仅返回小组组长
+  organizationId?: number // 按小组过滤
 }
 
 export interface GetClassAuthorizationsReq {
@@ -107,7 +156,7 @@ export function addAuthorization(documentId: number, data: AddAuthorizationReq) 
 }
 
 export interface BatchCancelAuthorizationReq {
-  authType: 1 | 2 // 1-用户 2-班级
+  authType: 1 | 2 | 3 // 1-用户 2-班级 3-小组
   targetIds: number[]
 }
 
@@ -161,6 +210,28 @@ export function getUserAuthorizations(documentId: number, params: GetUserAuthori
 export function getClassAuthorizations(documentId: number, params: GetClassAuthorizationsReq) {
   return request<ApiResponseData<ClassAuthorizationListData>>({
     url: `/v2/admin/documents/${documentId}/class-authorizations`,
+    method: "get",
+    params
+  })
+}
+
+/**
+ * 获取小组授权列表
+ */
+export function getOrgAuthorizations(documentId: number, params: GetOrgAuthorizationsReq) {
+  return request<ApiResponseData<OrgAuthorizationListData>>({
+    url: `/v2/admin/documents/${documentId}/org-authorizations`,
+    method: "get",
+    params
+  })
+}
+
+/**
+ * 获取组长授权列表（每条记录 = 组长 × 小组）
+ */
+export function getLeaderAuthorizations(documentId: number, params: GetLeaderAuthorizationsReq) {
+  return request<ApiResponseData<LeaderAuthorizationListData>>({
+    url: `/v2/admin/documents/${documentId}/leader-authorizations`,
     method: "get",
     params
   })

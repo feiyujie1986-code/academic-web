@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ClassAuthorizationItem, UserAuthorizationItem } from "@/api/document/authorization"
+import type { ClassAuthorizationItem, LeaderAuthorizationItem, OrgAuthorizationItem, UserAuthorizationItem } from "@/api/document/authorization"
 import type { DocumentResponse, DocumentTreeNode } from "@/api/document/document"
 import fileExcelIcon from "@@/assets/images/file-excel-icon.png"
 import fileFolderIcon from "@@/assets/images/file-file-icon.png"
@@ -15,6 +15,8 @@ import {
   addAuthorization,
   batchCancelAuthorization,
   getClassAuthorizations,
+  getLeaderAuthorizations,
+  getOrgAuthorizations,
   getUserAuthorizations
 } from "@/api/document/authorization"
 import {
@@ -26,6 +28,7 @@ import {
   getFolderTree,
   updateDocument
 } from "@/api/document/document"
+import { getOrganizationsApi } from "@/api/organization/organization"
 import { useCloudUpload } from "@/composables/useCloudUpload"
 
 // ==================== 文件分类映射 ====================
@@ -124,7 +127,7 @@ const isSubmittingRename = ref(false)
 const renameInputRef = ref<HTMLInputElement | null>(null)
 
 // 授权弹窗状态
-type AuthTargetType = "seniorTeacher" | "teacher" | "student" | "orgStaff" | "internal" | "class"
+type AuthTargetType = "seniorTeacher" | "teacher" | "student" | "newUser" | "orgStaff" | "orgLeader" | "internal" | "class" | "org"
 const authActiveTab = ref<AuthTargetType>("seniorTeacher") // 默认大使
 const authUserList = ref<UserAuthorizationItem[]>([]) // 人员授权列表
 const authLoading = ref(false)
@@ -151,6 +154,29 @@ const classAuthPageSize = ref(20)
 const classAuthTotal = ref(0)
 const classAuthSelectedRows = ref<ClassAuthorizationItem[]>([])
 const classAuthTableRef = ref<InstanceType<typeof import("element-plus")["ElTable"]> | null>(null)
+
+// 小组授权状态
+const orgAuthList = ref<OrgAuthorizationItem[]>([])
+const orgAuthLoading = ref(false)
+const orgAuthStatusFilter = ref<"" | "authorized" | "unauthorized">("")
+const orgAuthOrgId = ref<number | undefined>(undefined) // 选择小组筛选
+const orgAuthOrgOptions = ref<{ id: number, name: string }[]>([]) // 小组下拉选项
+const orgAuthOrgLoading = ref(false)
+const orgAuthPage = ref(1)
+const orgAuthPageSize = ref(20)
+const orgAuthTotal = ref(0)
+const orgAuthSelectedRows = ref<OrgAuthorizationItem[]>([])
+const orgAuthTableRef = ref<InstanceType<typeof import("element-plus")["ElTable"]> | null>(null)
+
+// 组长授权状态
+const leaderAuthList = ref<LeaderAuthorizationItem[]>([])
+const leaderAuthLoading = ref(false)
+const leaderAuthStatusFilter = ref<"" | "authorized" | "unauthorized">("")
+const leaderAuthKeyword = ref("")
+const leaderAuthPage = ref(1)
+const leaderAuthPageSize = ref(20)
+const leaderAuthTotal = ref(0)
+const leaderAuthSelectedRows = ref<LeaderAuthorizationItem[]>([])
 
 // 当前操作的文件
 const currentDocument = ref<DocumentResponse | null>(null)
@@ -896,20 +922,23 @@ async function handleBatchDelete() {
 // ==================== 权限管理 ====================
 
 // 授权标签配置：userType 对应后端的用户类型
-const authTabConfig: Record<AuthTargetType, { label: string, userType: 1 | 2 | 4 | 8 | 16 }> = {
-  seniorTeacher: { label: "大使", userType: 8 },
+const authTabConfig: Record<AuthTargetType, { label: string, userType: 1 | 2 | 4 | 8 | 16 | 32 | 0 }> = {
+  seniorTeacher: { label: "长执", userType: 8 },
   teacher: { label: "教师", userType: 4 },
-  student: { label: "学员", userType: 2 },
-  orgStaff: { label: "合作机构负责同工", userType: 16 },
+  student: { label: "会友", userType: 2 },
+  newUser: { label: "新人", userType: 32 },
+  orgStaff: { label: "事工同工", userType: 16 },
+  orgLeader: { label: "组长", userType: 0 },
   internal: { label: "统筹同工", userType: 1 },
-  class: { label: "班级", userType: 2 } // 班级 tab 暂时不使用 userType
+  class: { label: "班级", userType: 0 }, // 班级 tab 不使用 userType
+  org: { label: "小组", userType: 0 } // 小组 tab 不使用 userType
 }
 
 // 获取人员授权列表
 async function fetchUserAuthorizations() {
   if (!currentDocument.value) return
-  // 班级 tab 使用不同的 API，暂不处理
-  if (authActiveTab.value === "class") {
+  // 班级/小组/组长 tab 使用不同的 API，暂不处理
+  if (authActiveTab.value === "class" || authActiveTab.value === "org" || authActiveTab.value === "orgLeader") {
     authUserList.value = []
     authTotal.value = 0
     return
@@ -926,7 +955,7 @@ async function fetchUserAuthorizations() {
       pageSize: authPageSize.value,
       status: authStatusFilter.value || undefined,
       keyword,
-      userType: config.userType
+      userType: config.userType || undefined
     })
     if (res.code === 0) {
       authUserList.value = res.data.list
@@ -969,9 +998,24 @@ function handleAuthTabChange(tab: AuthTargetType) {
   classAuthNameOptions.value = []
   classAuthPage.value = 1
   classAuthSelectedRows.value = []
+  // 重置小组授权筛选
+  orgAuthStatusFilter.value = ""
+  orgAuthOrgId.value = undefined
+  orgAuthPage.value = 1
+  orgAuthSelectedRows.value = []
+  // 重置组长授权筛选
+  leaderAuthStatusFilter.value = ""
+  leaderAuthKeyword.value = ""
+  leaderAuthPage.value = 1
+  leaderAuthSelectedRows.value = []
 
   if (tab === "class") {
     fetchClassAuthorizations()
+  } else if (tab === "org") {
+    fetchOrgAuthorizations()
+    loadOrgOptions()
+  } else if (tab === "orgLeader") {
+    fetchLeaderAuthorizations()
   } else {
     fetchUserAuthorizations()
   }
@@ -1013,7 +1057,7 @@ async function handleAuthNameRemoteSearch(query: string) {
       page: 1,
       pageSize: 50,
       keyword: query,
-      userType: config.userType
+      userType: config.userType || undefined
     })
     if (res.code === 0) {
       // 提取唯一的用户选项
@@ -1301,6 +1345,248 @@ async function handleBatchClassCancelAuth() {
     })
     ElMessage.success(`成功取消授权 ${authorizedClasses.length} 个班级`)
     await fetchClassAuthorizations()
+  } catch {
+    ElMessage.error("批量取消授权失败")
+  }
+}
+
+// ==================== 小组授权 ====================
+
+// 加载小组下拉选项
+async function loadOrgOptions() {
+  if (orgAuthOrgOptions.value.length > 0) return
+  orgAuthOrgLoading.value = true
+  try {
+    const res = await getOrganizationsApi({ page: 1, pageSize: 999 })
+    if (res.code === 0) {
+      orgAuthOrgOptions.value = res.data.list.map(item => ({ id: item.id, name: item.name }))
+    }
+  } finally {
+    orgAuthOrgLoading.value = false
+  }
+}
+
+// 获取小组授权列表
+async function fetchOrgAuthorizations() {
+  if (!currentDocument.value) return
+
+  orgAuthLoading.value = true
+  orgAuthSelectedRows.value = []
+  try {
+    const res = await getOrgAuthorizations(currentDocument.value.id, {
+      page: orgAuthPage.value,
+      pageSize: orgAuthPageSize.value,
+      status: orgAuthStatusFilter.value || undefined,
+      keyword: undefined
+    })
+    if (res.code === 0) {
+      orgAuthList.value = res.data.list
+      orgAuthTotal.value = res.data.total
+    }
+  } catch {
+    ElMessage.error("获取小组授权列表失败")
+  } finally {
+    orgAuthLoading.value = false
+  }
+}
+
+function handleOrgAuthStatusChange() {
+  orgAuthPage.value = 1
+  fetchOrgAuthorizations()
+}
+
+function handleOrgAuthOrgChange() {
+  orgAuthPage.value = 1
+  fetchOrgAuthorizations()
+}
+
+function handleOrgAuthReset() {
+  orgAuthStatusFilter.value = ""
+  orgAuthOrgId.value = undefined
+  orgAuthPage.value = 1
+  fetchOrgAuthorizations()
+}
+
+function handleOrgAuthPageChange(page: number) {
+  orgAuthPage.value = page
+  fetchOrgAuthorizations()
+}
+
+function handleOrgAuthPageSizeChange(size: number) {
+  orgAuthPageSize.value = size
+  orgAuthPage.value = 1
+  fetchOrgAuthorizations()
+}
+
+function handleOrgAuthSelectionChange(rows: OrgAuthorizationItem[]) {
+  orgAuthSelectedRows.value = rows
+}
+
+async function handleSingleOrgAuthorize(row: OrgAuthorizationItem) {
+  if (!currentDocument.value) return
+  try {
+    await addAuthorization(currentDocument.value.id, {
+      authType: 3,
+      targetIds: [row.orgId]
+    })
+    ElMessage.success("授权成功")
+    await fetchOrgAuthorizations()
+  } catch {
+    ElMessage.error("授权失败")
+  }
+}
+
+async function handleSingleOrgCancelAuth(row: OrgAuthorizationItem) {
+  if (!currentDocument.value) return
+  try {
+    await batchCancelAuthorization(currentDocument.value.id, {
+      authType: 3,
+      targetIds: [row.orgId]
+    })
+    ElMessage.success("取消授权成功")
+    await fetchOrgAuthorizations()
+  } catch {
+    ElMessage.error("取消授权失败")
+  }
+}
+
+async function handleBatchOrgAuthorize() {
+  if (!currentDocument.value || orgAuthSelectedRows.value.length === 0) return
+  const targets = orgAuthSelectedRows.value.filter(r => !r.authorized)
+  if (targets.length === 0) {
+    ElMessage.warning("选中的小组都已授权")
+    return
+  }
+  try {
+    await addAuthorization(currentDocument.value.id, {
+      authType: 3,
+      targetIds: targets.map(r => r.orgId)
+    })
+    ElMessage.success(`成功授权 ${targets.length} 个小组`)
+    await fetchOrgAuthorizations()
+  } catch {
+    ElMessage.error("批量授权失败")
+  }
+}
+
+async function handleBatchOrgCancelAuth() {
+  if (!currentDocument.value || orgAuthSelectedRows.value.length === 0) return
+  const targets = orgAuthSelectedRows.value.filter(r => r.authorized)
+  if (targets.length === 0) {
+    ElMessage.warning("选中的小组都未授权")
+    return
+  }
+  try {
+    await batchCancelAuthorization(currentDocument.value.id, {
+      authType: 3,
+      targetIds: targets.map(r => r.orgId)
+    })
+    ElMessage.success(`成功取消授权 ${targets.length} 个小组`)
+    await fetchOrgAuthorizations()
+  } catch {
+    ElMessage.error("批量取消授权失败")
+  }
+}
+
+// ==================== 组长授权 ====================
+
+async function fetchLeaderAuthorizations() {
+  if (!currentDocument.value) return
+  leaderAuthLoading.value = true
+  leaderAuthSelectedRows.value = []
+  try {
+    const res = await getLeaderAuthorizations(currentDocument.value.id, {
+      page: leaderAuthPage.value,
+      pageSize: leaderAuthPageSize.value,
+      status: leaderAuthStatusFilter.value || undefined,
+      keyword: leaderAuthKeyword.value || undefined
+    })
+    if (res.code === 0) {
+      leaderAuthList.value = res.data.list
+      leaderAuthTotal.value = res.data.total
+    }
+  } catch {
+    ElMessage.error("获取组长授权列表失败")
+  } finally {
+    leaderAuthLoading.value = false
+  }
+}
+
+function handleLeaderAuthStatusChange() {
+  leaderAuthPage.value = 1
+  fetchLeaderAuthorizations()
+}
+
+function handleLeaderAuthSearch() {
+  leaderAuthPage.value = 1
+  fetchLeaderAuthorizations()
+}
+
+function handleLeaderAuthReset() {
+  leaderAuthStatusFilter.value = ""
+  leaderAuthKeyword.value = ""
+  leaderAuthPage.value = 1
+  fetchLeaderAuthorizations()
+}
+
+function handleLeaderAuthPageChange(page: number) {
+  leaderAuthPage.value = page
+  fetchLeaderAuthorizations()
+}
+
+function handleLeaderAuthPageSizeChange(size: number) {
+  leaderAuthPageSize.value = size
+  leaderAuthPage.value = 1
+  fetchLeaderAuthorizations()
+}
+
+function handleLeaderAuthSelectionChange(rows: LeaderAuthorizationItem[]) {
+  leaderAuthSelectedRows.value = rows
+}
+
+async function handleSingleLeaderAuthorize(row: LeaderAuthorizationItem) {
+  if (!currentDocument.value) return
+  try {
+    await addAuthorization(currentDocument.value.id, { authType: 1, targetIds: [row.userId] })
+    ElMessage.success("授权成功")
+    await fetchLeaderAuthorizations()
+  } catch {
+    ElMessage.error("授权失败")
+  }
+}
+
+async function handleSingleLeaderCancelAuth(row: LeaderAuthorizationItem) {
+  if (!currentDocument.value) return
+  try {
+    await batchCancelAuthorization(currentDocument.value.id, { authType: 1, targetIds: [row.userId] })
+    ElMessage.success("取消授权成功")
+    await fetchLeaderAuthorizations()
+  } catch {
+    ElMessage.error("取消授权失败")
+  }
+}
+
+async function handleBatchLeaderAuthorize() {
+  if (!currentDocument.value || leaderAuthSelectedRows.value.length === 0) return
+  const targets = leaderAuthSelectedRows.value.filter(r => !r.authorized)
+  if (targets.length === 0) { ElMessage.warning("选中的组长都已授权"); return }
+  try {
+    await addAuthorization(currentDocument.value.id, { authType: 1, targetIds: targets.map(r => r.userId) })
+    ElMessage.success(`成功授权 ${targets.length} 条记录`)
+    await fetchLeaderAuthorizations()
+  } catch {
+    ElMessage.error("批量授权失败")
+  }
+}
+
+async function handleBatchLeaderCancelAuth() {
+  if (!currentDocument.value || leaderAuthSelectedRows.value.length === 0) return
+  const targets = leaderAuthSelectedRows.value.filter(r => r.authorized)
+  if (targets.length === 0) { ElMessage.warning("选中的组长都未授权"); return }
+  try {
+    await batchCancelAuthorization(currentDocument.value.id, { authType: 1, targetIds: targets.map(r => r.userId) })
+    ElMessage.success(`成功取消授权 ${targets.length} 条记录`)
+    await fetchLeaderAuthorizations()
   } catch {
     ElMessage.error("批量取消授权失败")
   }
@@ -1686,7 +1972,7 @@ onMounted(() => {
           :class="{ active: authActiveTab === 'seniorTeacher' }"
           @click="handleAuthTabChange('seniorTeacher')"
         >
-          大使
+          长执
         </div>
         <div
           class="auth-tab"
@@ -1700,14 +1986,28 @@ onMounted(() => {
           :class="{ active: authActiveTab === 'student' }"
           @click="handleAuthTabChange('student')"
         >
-          学员
+          会友
+        </div>
+        <div
+          class="auth-tab"
+          :class="{ active: authActiveTab === 'newUser' }"
+          @click="handleAuthTabChange('newUser')"
+        >
+          新人
         </div>
         <div
           class="auth-tab"
           :class="{ active: authActiveTab === 'orgStaff' }"
           @click="handleAuthTabChange('orgStaff')"
         >
-          合作机构负责同工
+          事工同工
+        </div>
+        <div
+          class="auth-tab"
+          :class="{ active: authActiveTab === 'orgLeader' }"
+          @click="handleAuthTabChange('orgLeader')"
+        >
+          组长
         </div>
         <div
           class="auth-tab"
@@ -1723,10 +2023,17 @@ onMounted(() => {
         >
           班级
         </div>
+        <div
+          class="auth-tab"
+          :class="{ active: authActiveTab === 'org' }"
+          @click="handleAuthTabChange('org')"
+        >
+          小组
+        </div>
       </div>
 
       <!-- 筛选区域 -->
-      <div v-if="authActiveTab !== 'class'" class="auth-filter">
+      <div v-if="authActiveTab !== 'class' && authActiveTab !== 'org' && authActiveTab !== 'orgLeader'" class="auth-filter">
         <el-select
           v-model="authStatusFilter"
           placeholder="授权状态"
@@ -1738,27 +2045,9 @@ onMounted(() => {
           <el-option label="已授权" value="authorized" />
           <el-option label="未授权" value="unauthorized" />
         </el-select>
-        <el-select
-          v-model="authNameFilter"
-          :placeholder="`选择${authTabConfig[authActiveTab].label}`"
-          class="filter-select name-filter"
-          filterable
-          remote
-          clearable
-          :remote-method="handleAuthNameRemoteSearch"
-          :loading="authNameFilterLoading"
-          @change="handleAuthNameFilterChange"
-        >
-          <el-option
-            v-for="item in authNameOptions"
-            :key="item.userId"
-            :label="item.nickname"
-            :value="item.nickname"
-          />
-        </el-select>
         <el-input
           v-model="authKeyword"
-          placeholder="请输入邮箱"
+          placeholder="请输入账号"
           class="filter-input"
           clearable
           @keyup.enter="handleAuthSearch"
@@ -1783,7 +2072,7 @@ onMounted(() => {
 
       <!-- 授权表格 -->
       <el-table
-        v-if="authActiveTab !== 'class'"
+        v-if="authActiveTab !== 'class' && authActiveTab !== 'org' && authActiveTab !== 'orgLeader'"
         ref="authTableRef"
         v-loading="authLoading"
         :data="authUserList"
@@ -1792,19 +2081,14 @@ onMounted(() => {
         @selection-change="handleAuthSelectionChange"
       >
         <el-table-column type="selection" width="50" />
-        <el-table-column :label="`${authTabConfig[authActiveTab].label}姓名`" min-width="180">
+        <el-table-column :label="`${authTabConfig[authActiveTab].label}昵称`" min-width="180">
           <template #default="{ row }">
             {{ row.nickname || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="邮箱" min-width="220">
+        <el-table-column label="账号" min-width="220">
           <template #default="{ row }">
-            {{ row.email || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column v-if="authActiveTab === 'orgStaff'" label="所属合作机构" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.organizationName || '-' }}
+            {{ row.username || '-' }}
           </template>
         </el-table-column>
         <el-table-column label="授权状态" width="100">
@@ -1890,7 +2174,7 @@ onMounted(() => {
         @selection-change="handleClassAuthSelectionChange"
       >
         <el-table-column type="selection" width="50" />
-        <el-table-column label="班级名称" min-width="200">
+        <el-table-column label="小班名称" min-width="200">
           <template #default="{ row }">
             {{ row.className || '-' }}
           </template>
@@ -1925,7 +2209,7 @@ onMounted(() => {
       </el-table>
 
       <!-- 分页 - 人员授权 -->
-      <div v-if="authActiveTab !== 'class'" class="auth-pagination">
+      <div v-if="authActiveTab !== 'class' && authActiveTab !== 'org' && authActiveTab !== 'orgLeader'" class="auth-pagination">
         <span class="auth-total">共 {{ authTotal }} 条</span>
         <el-pagination
           v-model:current-page="authPage"
@@ -1951,6 +2235,213 @@ onMounted(() => {
           layout="sizes, prev, pager, next"
           @size-change="handleClassAuthPageSizeChange"
           @current-change="handleClassAuthPageChange"
+        />
+      </div>
+
+      <!-- 小组 tab 筛选区域 -->
+      <div v-if="authActiveTab === 'org'" class="auth-filter">
+        <el-select
+          v-model="orgAuthStatusFilter"
+          placeholder="授权状态"
+          class="filter-select"
+          clearable
+          @change="handleOrgAuthStatusChange"
+        >
+          <el-option label="全部" value="" />
+          <el-option label="已授权" value="authorized" />
+          <el-option label="未授权" value="unauthorized" />
+        </el-select>
+        <el-select
+          v-model="orgAuthOrgId"
+          placeholder="选择小组"
+          class="filter-select name-filter"
+          clearable
+          :loading="orgAuthOrgLoading"
+          @change="handleOrgAuthOrgChange"
+        >
+          <el-option
+            v-for="item in orgAuthOrgOptions"
+            :key="item.id"
+            :label="item.name"
+            :value="item.id"
+          />
+        </el-select>
+        <el-button class="reset-btn" @click="handleOrgAuthReset">
+          <el-icon><RefreshLeft /></el-icon>
+          重置
+        </el-button>
+        <el-button type="primary" :disabled="orgAuthSelectedRows.length === 0" @click="handleBatchOrgAuthorize">
+          授权
+        </el-button>
+        <el-button class="outline-btn danger" :disabled="orgAuthSelectedRows.length === 0" @click="handleBatchOrgCancelAuth">
+          取消授权
+        </el-button>
+      </div>
+
+      <!-- 小组授权表格 -->
+      <el-table
+        v-if="authActiveTab === 'org'"
+        ref="orgAuthTableRef"
+        v-loading="orgAuthLoading"
+        :data="orgAuthList"
+        style="width: 100%"
+        row-key="orgId"
+        @selection-change="handleOrgAuthSelectionChange"
+      >
+        <el-table-column type="selection" width="50" />
+        <el-table-column label="小组名称" min-width="200">
+          <template #default="{ row }">
+            {{ row.orgName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="授权状态" width="100">
+          <template #default="{ row }">
+            <span :class="row.authorized ? 'status-authorized' : 'status-unauthorized'">
+              {{ row.authorized ? '已授权' : '未授权' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.authorized"
+              link
+              type="danger"
+              @click="handleSingleOrgCancelAuth(row)"
+            >
+              取消授权
+            </el-button>
+            <el-button
+              v-else
+              link
+              type="primary"
+              @click="handleSingleOrgAuthorize(row)"
+            >
+              授权
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 - 小组授权 -->
+      <div v-if="authActiveTab === 'org'" class="auth-pagination">
+        <span class="auth-total">共 {{ orgAuthTotal }} 条</span>
+        <el-pagination
+          v-model:current-page="orgAuthPage"
+          v-model:page-size="orgAuthPageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="orgAuthTotal"
+          background
+          layout="sizes, prev, pager, next"
+          @size-change="handleOrgAuthPageSizeChange"
+          @current-change="handleOrgAuthPageChange"
+        />
+      </div>
+
+      <!-- 组长 tab 筛选区域 -->
+      <div v-if="authActiveTab === 'orgLeader'" class="auth-filter">
+        <el-select
+          v-model="leaderAuthStatusFilter"
+          placeholder="授权状态"
+          class="filter-select"
+          clearable
+          @change="handleLeaderAuthStatusChange"
+        >
+          <el-option label="全部" value="" />
+          <el-option label="已授权" value="authorized" />
+          <el-option label="未授权" value="unauthorized" />
+        </el-select>
+        <el-input
+          v-model="leaderAuthKeyword"
+          placeholder="请输入账号"
+          class="filter-input"
+          clearable
+          @keyup.enter="handleLeaderAuthSearch"
+        >
+          <template #suffix>
+            <el-icon class="search-icon" @click="handleLeaderAuthSearch">
+              <Search />
+            </el-icon>
+          </template>
+        </el-input>
+        <el-button class="reset-btn" @click="handleLeaderAuthReset">
+          <el-icon><RefreshLeft /></el-icon>
+          重置
+        </el-button>
+        <el-button type="primary" :disabled="leaderAuthSelectedRows.length === 0" @click="handleBatchLeaderAuthorize">
+          授权
+        </el-button>
+        <el-button class="outline-btn danger" :disabled="leaderAuthSelectedRows.length === 0" @click="handleBatchLeaderCancelAuth">
+          取消授权
+        </el-button>
+      </div>
+
+      <!-- 组长授权表格 -->
+      <el-table
+        v-if="authActiveTab === 'orgLeader'"
+        v-loading="leaderAuthLoading"
+        :data="leaderAuthList"
+        style="width: 100%"
+        row-key="userId"
+        @selection-change="handleLeaderAuthSelectionChange"
+      >
+        <el-table-column type="selection" width="50" />
+        <el-table-column label="组长昵称" min-width="160">
+          <template #default="{ row }">
+            {{ row.nickname || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="账号" min-width="180">
+          <template #default="{ row }">
+            {{ row.username || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="所在小组" min-width="180">
+          <template #default="{ row }">
+            {{ row.orgName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="授权状态" width="100">
+          <template #default="{ row }">
+            <span :class="row.authorized ? 'status-authorized' : 'status-unauthorized'">
+              {{ row.authorized ? '已授权' : '未授权' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.authorized"
+              link
+              type="danger"
+              @click="handleSingleLeaderCancelAuth(row)"
+            >
+              取消授权
+            </el-button>
+            <el-button
+              v-else
+              link
+              type="primary"
+              @click="handleSingleLeaderAuthorize(row)"
+            >
+              授权
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 - 组长授权 -->
+      <div v-if="authActiveTab === 'orgLeader'" class="auth-pagination">
+        <span class="auth-total">共 {{ leaderAuthTotal }} 条</span>
+        <el-pagination
+          v-model:current-page="leaderAuthPage"
+          v-model:page-size="leaderAuthPageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="leaderAuthTotal"
+          background
+          layout="sizes, prev, pager, next"
+          @size-change="handleLeaderAuthPageSizeChange"
+          @current-change="handleLeaderAuthPageChange"
         />
       </div>
 

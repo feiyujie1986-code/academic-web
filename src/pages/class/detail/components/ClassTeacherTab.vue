@@ -5,7 +5,6 @@ import { formatDateTime } from "@@/utils/datetime"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { onMounted, ref } from "vue"
 import { bindClassUsersApi, getClassUsersApi } from "@/api/class/user"
-import { getTeachersApi as getSeniorTeachersApi } from "@/api/member/seniorTeacher"
 import { getTeachersApi } from "@/api/member/teacher"
 import SelectUserModal from "../../components/SelectUserModal.vue"
 
@@ -16,7 +15,6 @@ interface Props {
 const props = defineProps<Props>()
 // Emits定义
 const emit = defineEmits<{
-  (e: "updateSeniorTeacherCount", count: number): void
   (e: "updateTeacherCount", count: number): void
   (e: "usersUpdated"): void
 }>()
@@ -24,7 +22,6 @@ const emit = defineEmits<{
 // 组件挂载时加载数据
 onMounted(() => {
   if (props.classId) {
-    fetchUserData("senior_teacher")
     fetchUserData("teacher")
   }
 })
@@ -34,7 +31,6 @@ watch(
   () => props.classId,
   (newClassId: number) => {
     if (newClassId) {
-      fetchUserData("senior_teacher")
       fetchUserData("teacher")
     }
   }
@@ -42,14 +38,11 @@ watch(
 
 // 数据状态
 const loading = ref(false)
-const addAmbassadorLoading = ref(false)
 const addTeacherLoading = ref(false)
-const ambassadors = ref<ClassUserModel[]>([])
 const teachers = ref<ClassUserModel[]>([])
 
 // 表单数据
 const form = ref({
-  selectedAmbassadors: [] as ClassUserModel[],
   selectedTeachers: [] as ClassUserModel[]
 })
 
@@ -59,15 +52,7 @@ async function fetchUserData(userType: string) {
   getClassUsersApi(props.classId, [userType])
     .then((res) => {
       if (res.code === 0) {
-        if (userType === "senior_teacher") {
-          ambassadors.value = res.data.map((item) => {
-            return {
-              ...item,
-              joinDate: formatDateTime(item.joinTime * 1000)
-            }
-          })
-          emit("updateSeniorTeacherCount", res.data.length)
-        } else if (userType === "teacher") {
+        if (userType === "teacher") {
           teachers.value = res.data.map((item) => {
             return {
               ...item,
@@ -85,31 +70,6 @@ async function fetchUserData(userType: string) {
     })
 }
 
-// 添加大使
-function handleAddAmbassador() {
-  // 获取用户数据
-  addAmbassadorLoading.value = true
-  getSeniorTeachersApi({
-    page: 1,
-    pageSize: 999999
-  })
-    .then((res) => {
-      if (res.code === 0) {
-        userSelectModal.value.userList = res.data.list
-        userSelectModal.value.userType = "senior_teacher"
-        userSelectModal.value.selectedIds = ambassadors.value.map(item => item.userId)
-        // 打开选择模态框
-        userSelectModal.value.visible = true
-      }
-    })
-    .catch((error) => {
-      console.log(error)
-    })
-    .finally(() => {
-      addAmbassadorLoading.value = false
-    })
-}
-
 // 添加教师
 function handleAddTeacher() {
   // 获取用户数据
@@ -123,6 +83,11 @@ function handleAddTeacher() {
         userSelectModal.value.userList = res.data.list
         userSelectModal.value.userType = "teacher"
         userSelectModal.value.selectedIds = teachers.value.map(item => item.userId)
+        userSelectModal.value.initialSelectedUsers = teachers.value.map(item => ({
+          id: item.userId,
+          nickname: item.nickname,
+          email: item.email
+        }))
         // 打开选择模态框
         userSelectModal.value.visible = true
       }
@@ -133,38 +98,6 @@ function handleAddTeacher() {
     .finally(() => {
       addTeacherLoading.value = false
     })
-}
-
-// 删除大使
-function handleRemoveAmbassador(id: number) {
-  ElMessageBox.confirm("确定要删除该大使吗？", "提示", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning"
-  })
-    .then(() => {
-      loading.value = true
-      bindClassUsersApi({
-        classId: props.classId,
-        userIds: [id],
-        userType: "senior_teacher",
-        operationType: "remove"
-      })
-        .then((res) => {
-          if (res.code === 0) {
-            ElMessage.success("删除成功")
-            fetchUserData("senior_teacher")
-            emit("updateSeniorTeacherCount", ambassadors.value.length - 1)
-            emit("usersUpdated") // 通知父组件用户数据已更新
-          } else {
-            ElMessage.error(res.msg)
-          }
-        })
-        .finally(() => {
-          loading.value = false
-        })
-    })
-    .catch(() => {})
 }
 
 // 删除教师
@@ -194,48 +127,6 @@ function handleRemoveTeacher(id: number) {
         })
         .finally(() => {
           loading.value = false
-        })
-    })
-    .catch(() => {})
-}
-
-// 批量删除大使
-function handleBatchRemoveAmbassadors() {
-  if (!form.value.selectedAmbassadors.length) {
-    ElMessage.warning("请至少选择一位大使")
-    return
-  }
-
-  ElMessageBox.confirm(
-    `确定要删除选中的${form.value.selectedAmbassadors.length}位大使吗？`,
-    "提示",
-    {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning"
-    }
-  )
-    .then(() => {
-      loading.value = true
-      bindClassUsersApi({
-        classId: props.classId,
-        userIds: form.value.selectedAmbassadors.map(item => item.userId),
-        userType: "senior_teacher",
-        operationType: "remove"
-      })
-        .then((res) => {
-          if (res.code === 0) {
-            ElMessage.success("删除成功")
-            fetchUserData("senior_teacher")
-            emit("updateSeniorTeacherCount", ambassadors.value.length - form.value.selectedAmbassadors.length)
-            emit("usersUpdated") // 通知父组件用户数据已更新
-          } else {
-            ElMessage.error(res.msg)
-          }
-        })
-        .finally(() => {
-          loading.value = false
-          form.value.selectedAmbassadors = []
         })
     })
     .catch(() => {})
@@ -292,6 +183,7 @@ const userSelectModal = ref({
   visible: false,
   userList: [] as userDataModel[],
   selectedIds: [] as number[],
+  initialSelectedUsers: [] as userDataModel[],
   selectedUserList: [] as userDataModel[],
   userType: "teacher",
   minCount: 1,
@@ -322,47 +214,6 @@ function handleUserSelectConfirm(selectUserIds: number[]) {
 
 <template>
   <div class="tab-content">
-    <!-- 班级大使 -->
-    <div class="section">
-      <div class="section-header">
-        <h3>班级大使</h3>
-        <div class="actions">
-          <el-button type="primary" :loading="addAmbassadorLoading" @click="handleAddAmbassador">
-            + 新增大使
-          </el-button>
-          <el-button type="danger" @click="handleBatchRemoveAmbassadors">
-            批量删除
-          </el-button>
-        </div>
-      </div>
-
-      <div class="table-wrapper">
-        <el-table
-          :data="ambassadors"
-          v-loading="loading"
-          @selection-change="(val) => form.selectedAmbassadors = val"
-        >
-          <el-table-column type="selection" width="55" />
-          <el-table-column prop="id" label="序号" width="60">
-            <template #default="scope">
-              {{ scope.$index + 1 }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="nickname" label="姓名" width="120" />
-          <el-table-column prop="email" label="邮箱" width="200" />
-          <el-table-column prop="joinDate" label="加入班级日期" width="150" />
-          <el-table-column prop="remark" label="备注" />
-          <el-table-column label="操作" width="80">
-            <template #default="scope">
-              <el-button size="small" type="danger" link @click="handleRemoveAmbassador(scope.row.userId)">
-                删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-    </div>
-
     <!-- 班级教师 -->
     <div class="section">
       <div class="section-header">
@@ -408,6 +259,7 @@ function handleUserSelectConfirm(selectUserIds: number[]) {
         :title="userSelectModal.title"
         :user-type="userSelectModal.userType"
         :selected-user-ids="userSelectModal.selectedIds"
+        :initial-selected-users="userSelectModal.initialSelectedUsers"
         :user-list="userSelectModal.userList"
         :min-select-count="userSelectModal.minCount"
         :max-select-count="userSelectModal.maxCount"

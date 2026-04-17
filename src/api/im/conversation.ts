@@ -114,6 +114,7 @@ export interface ConversationMemberCandidate {
   email: string
   userRole: string
   roleName: string
+  isOrgLeader: boolean
 }
 
 // 查询群组列表参数
