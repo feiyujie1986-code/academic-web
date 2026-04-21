@@ -206,7 +206,7 @@ function operateAction(formEl: FormInstance | undefined) {
             email: formData.email,
             active: formData.active,
             gender: formData.gender,
-            organizationId: formData.organizationId,
+            organizationId: formData.organizationId
           })
           if (res.code === 0) {
             // 新建后设为组长
@@ -237,7 +237,7 @@ function operateAction(formEl: FormInstance | undefined) {
             email: formData.email,
             active: formData.active,
             gender: formData.gender,
-            organizationId: formData.organizationId,
+            organizationId: formData.organizationId
           })
           if (res.code === 0) {
             ElMessage({ type: "success", message: res.msg })

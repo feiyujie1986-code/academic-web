@@ -45,7 +45,7 @@ export function deleteNewStudentApi(data: CId) {
 }
 
 /** 新增新人 */
-export function addNewStudentApi(data: NewStuData & { password?: string; username?: string }) {
+export function addNewStudentApi(data: NewStuData & { password?: string, username?: string }) {
   return request<ApiResponseData<{ id: number } | null>>({
     url: "/v2/admin/new-stu",
     method: "post",

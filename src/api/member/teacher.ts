@@ -54,7 +54,7 @@ export function deleteTeacherApi(data: CId) {
 }
 
 // 添加教师
-export function addTeacherApi(data: teacherData & { password?: string; username?: string }) {
+export function addTeacherApi(data: teacherData & { password?: string, username?: string }) {
   return request<ApiResponseData<{ id: number } | null>>({
     url: "/v2/admin/teachers",
     method: "post",

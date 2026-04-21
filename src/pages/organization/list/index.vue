@@ -1,18 +1,18 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from "element-plus"
-import type { OrganizationModel } from "@/api/organization/organization"
 import type { GroupMember } from "@/api/member/memberGroup"
+import type { OrganizationModel } from "@/api/organization/organization"
 import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
+import { getUserTypeLabelStyle } from "@@/utils/userTypeLabel"
 import { reactive, ref } from "vue"
+import { getMemberGroupMembersApi } from "@/api/member/memberGroup"
 import {
   addOrganizationApi,
   deleteOrganizationApi,
   editOrganizationApi,
   getOrganizationsApi
 } from "@/api/organization/organization"
-import { getMemberGroupMembersApi } from "@/api/member/memberGroup"
-import { getUserTypeLabelStyle } from "@@/utils/userTypeLabel"
 
 defineOptions({
   name: "OrganizationList"
@@ -290,7 +290,7 @@ function handleCurrentChange(value: number) {
                     borderRadius: '4px',
                     color: getUserTypeLabelStyle(label).color,
                     background: getUserTypeLabelStyle(label).background,
-                    borderColor: getUserTypeLabelStyle(label).border
+                    borderColor: getUserTypeLabelStyle(label).border,
                   }"
                 >{{ label }}</el-tag>
               </div>

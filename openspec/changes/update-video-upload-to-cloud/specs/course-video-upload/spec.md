@@ -7,6 +7,7 @@
 课程模板排课中的录播视频上传 SHALL 使用云存储直传方案（`useCloudUpload`），而非服务器中转方案。
 
 系统 SHALL 根据文件大小自动选择上传方式：
+
 - 小于 5MB：直传（PUT 请求到预签名 URL）
 - 大于等于 5MB：Multipart 分片直传
 

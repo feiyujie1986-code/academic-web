@@ -14,6 +14,7 @@ The educational management system needs a centralized resource management module
 - **INTEGRATE** Folder tree navigation and breadcrumb path
 
 ### Key Features
+
 1. File type filtering (all/media/document/image)
 2. Keyword search with pagination
 3. Folder hierarchy navigation

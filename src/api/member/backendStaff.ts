@@ -37,7 +37,7 @@ export function getBackendStaffsApi(data: ReqBackendStaffList) {
 }
 
 /** 添加事工同工 */
-export function addBackendStaffApi(data: BackendStaffData & { password?: string; username?: string }) {
+export function addBackendStaffApi(data: BackendStaffData & { password?: string, username?: string }) {
   return request<ApiResponseData<{ id: number } | null>>({
     url: "/v2/admin/backend-staffs",
     method: "post",

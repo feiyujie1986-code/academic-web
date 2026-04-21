@@ -511,21 +511,21 @@ function switchAction(id: number, active: boolean) {
           <el-table-column fixed="right" label="操作" align="center" width="240">
             <template #default="scope">
               <div style="white-space: nowrap">
-              <el-button type="primary" text icon="Edit" size="small" @click="editDialog(scope.row)">
-                编辑
-              </el-button>
-              <el-button type="primary" text icon="Key" size="small" @click="resetPasswordAction(scope.row)">
-                重置
-              </el-button>
-              <el-button
-                type="danger"
-                text
-                icon="Delete"
-                size="small"
-                @click="deleteAction(scope.row)"
-              >
-                删除
-              </el-button>
+                <el-button type="primary" text icon="Edit" size="small" @click="editDialog(scope.row)">
+                  编辑
+                </el-button>
+                <el-button type="primary" text icon="Key" size="small" @click="resetPasswordAction(scope.row)">
+                  重置
+                </el-button>
+                <el-button
+                  type="danger"
+                  text
+                  icon="Delete"
+                  size="small"
+                  @click="deleteAction(scope.row)"
+                >
+                  删除
+                </el-button>
               </div>
             </template>
           </el-table-column>

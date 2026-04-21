@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { reactive, ref, watch } from "vue"
-import { ElMessage, ElMessageBox } from "element-plus"
 import type { GroupMember, MemberGroup } from "@/api/member/memberGroup"
-import { getMemberGroupMembersApi, getMemberGroupsApi } from "@/api/member/memberGroup"
 import { getUserTypeLabelStyle } from "@@/utils/userTypeLabel"
+import { ElMessage, ElMessageBox } from "element-plus"
+import { reactive, ref, watch } from "vue"
+import { getMemberGroupMembersApi, getMemberGroupsApi } from "@/api/member/memberGroup"
 
 interface UserItem {
   id: number
@@ -153,7 +153,7 @@ async function loadGroupMembers(group: MemberGroup, page = 1) {
     if (res.code === 0) {
       groupState[key] = { loading: false, members: res.data.members, total: res.data.total, page: res.data.page }
       // 自动补全已选用户的数据（用于右侧显示）
-      res.data.members.forEach(m => {
+      res.data.members.forEach((m) => {
         if (isSelected(m.id)) selectedUsersData[m.id] = m
       })
     } else {
@@ -168,7 +168,7 @@ async function loadGroupMembers(group: MemberGroup, page = 1) {
 
 // 展开分组时懒加载成员
 watch(expandedGroupKeys, (keys) => {
-  keys.forEach(key => {
+  keys.forEach((key) => {
     if (!groupState[key]) {
       const group = groups.value.find(g => groupKey(g) === key)
       if (group) loadGroupMembers(group, 1)
@@ -181,7 +181,7 @@ function handleGroupPageChange(group: MemberGroup, page: number) {
 }
 
 // 分组全选复选框状态
-function getGroupCheckState(group: MemberGroup): { checked: boolean; indeterminate: boolean } {
+function getGroupCheckState(group: MemberGroup): { checked: boolean, indeterminate: boolean } {
   const key = groupKey(group)
   const state = groupState[key]
   if (!state || !state.members.length) return { checked: false, indeterminate: false }
@@ -238,7 +238,9 @@ watch(() => props.modelValue, (val) => {
     selectedIds.value = [...props.selectedUserIds]
     Object.keys(selectedUsersData).forEach(k => delete selectedUsersData[Number(k)])
     // 用传入的初始用户信息预填名称，避免右侧显示 #id fallback
-    props.initialSelectedUsers.forEach(u => { selectedUsersData[u.id] = u })
+    props.initialSelectedUsers.forEach((u) => {
+      selectedUsersData[u.id] = u
+    })
     searchKeyword.value = ""
     expandedGroupKeys.value = []
 
@@ -346,7 +348,7 @@ function handleClose() {
                                   :style="{
                                     color: getUserTypeLabelStyle(label).color,
                                     background: getUserTypeLabelStyle(label).background,
-                                    borderColor: getUserTypeLabelStyle(label).border
+                                    borderColor: getUserTypeLabelStyle(label).border,
                                   }"
                                 >{{ label }}</span>
                               </div>
@@ -415,7 +417,7 @@ function handleClose() {
                                   :style="{
                                     color: getUserTypeLabelStyle(label).color,
                                     background: getUserTypeLabelStyle(label).background,
-                                    borderColor: getUserTypeLabelStyle(label).border
+                                    borderColor: getUserTypeLabelStyle(label).border,
                                   }"
                                 >{{ label }}</span>
                               </div>

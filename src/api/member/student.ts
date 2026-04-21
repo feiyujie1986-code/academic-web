@@ -54,7 +54,7 @@ export function deleteStudentApi(data: CId) {
 }
 
 // 添加学员
-export function addStudentApi(data: studentData & { password?: string; username?: string }) {
+export function addStudentApi(data: studentData & { password?: string, username?: string }) {
   return request<ApiResponseData<{ id: number } | null>>({
     url: "/v2/admin/students",
     method: "post",

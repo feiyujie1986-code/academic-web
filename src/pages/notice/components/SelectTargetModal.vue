@@ -153,7 +153,6 @@ function handleRoleChange() {
   fetchCandidates()
 }
 
-
 // 获取角色标签样式（参考社区中心人员管理）
 function getRoleTagStyle(roleName: string): Record<string, string> {
   const styleMap: Record<string, { bg: string, color: string }> = {
