@@ -203,9 +203,6 @@ async function confirmEdit() {
 //     .catch(() => {})
 // };
 
-function handleUpdateSeniorTeacheCount(count: number) {
-  classInfo.seniorTeacherCount = count
-}
 function handleUpdateTeacherCount(count: number) {
   classInfo.teacherCount = count
 }

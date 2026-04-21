@@ -135,7 +135,6 @@ const authKeyword = ref("")
 const authStatusFilter = ref<"" | "authorized" | "unauthorized">("")
 const authNameFilter = ref("") // 名称筛选
 const authNameOptions = ref<{ userId: number, nickname: string }[]>([]) // 名称筛选下拉选项
-const authNameFilterLoading = ref(false)
 const authPage = ref(1)
 const authPageSize = ref(20)
 const authTotal = ref(0)
@@ -1043,47 +1042,6 @@ function handleAuthStatusChange() {
   fetchUserAuthorizations()
 }
 
-// 名称筛选远程搜索
-async function handleAuthNameRemoteSearch(query: string) {
-  if (!currentDocument.value || !query) {
-    authNameOptions.value = []
-    return
-  }
-
-  authNameFilterLoading.value = true
-  try {
-    const config = authTabConfig[authActiveTab.value]
-    const res = await getUserAuthorizations(currentDocument.value.id, {
-      page: 1,
-      pageSize: 50,
-      keyword: query,
-      userType: config.userType || undefined
-    })
-    if (res.code === 0) {
-      // 提取唯一的用户选项
-      const uniqueUsers = new Map<number, { userId: number, nickname: string }>()
-      res.data.list.forEach((item) => {
-        if (!uniqueUsers.has(item.userId)) {
-          uniqueUsers.set(item.userId, { userId: item.userId, nickname: item.nickname })
-        }
-      })
-      authNameOptions.value = Array.from(uniqueUsers.values())
-    }
-  } finally {
-    authNameFilterLoading.value = false
-  }
-}
-
-// 名称筛选变化
-function handleAuthNameFilterChange() {
-  // 当选择名称筛选时，清空邮箱搜索
-  if (authNameFilter.value) {
-    authKeyword.value = ""
-  }
-  authPage.value = 1
-  fetchUserAuthorizations()
-}
-
 // 授权分页变化
 function handleAuthPageChange(page: number) {
   authPage.value = page
@@ -1570,7 +1528,8 @@ async function handleBatchLeaderAuthorize() {
   if (!currentDocument.value || leaderAuthSelectedRows.value.length === 0) return
   const targets = leaderAuthSelectedRows.value.filter(r => !r.authorized)
   if (targets.length === 0) {
-    ElMessage.warning("选中的组长都已授权"); return
+    ElMessage.warning("选中的组长都已授权")
+    return
   }
   try {
     await addAuthorization(currentDocument.value.id, { authType: 1, targetIds: targets.map(r => r.userId) })
@@ -1585,7 +1544,8 @@ async function handleBatchLeaderCancelAuth() {
   if (!currentDocument.value || leaderAuthSelectedRows.value.length === 0) return
   const targets = leaderAuthSelectedRows.value.filter(r => r.authorized)
   if (targets.length === 0) {
-    ElMessage.warning("选中的组长都未授权"); return
+    ElMessage.warning("选中的组长都未授权")
+    return
   }
   try {
     await batchCancelAuthorization(currentDocument.value.id, { authType: 1, targetIds: targets.map(r => r.userId) })
