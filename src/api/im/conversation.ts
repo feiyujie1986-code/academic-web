@@ -66,14 +66,18 @@ export interface ConversationMember {
   userId: number
   userName: string
   userAvatar: string
-  role: number
-  roleName: string
+  userRole: string
+  userRoleName: string
+  memberRole: number // 0=普通成员, 1=群主, 2=管理员
+  memberRoleName: string
   nickname: string
   muted: number
   muteEndTime: number | null
   joinedAt: number
   syncStatus: SyncStatus
   syncStatusName: string
+  isOrgLeader?: boolean
+  isClassMonitor?: boolean
 }
 
 // 群成员列表响应

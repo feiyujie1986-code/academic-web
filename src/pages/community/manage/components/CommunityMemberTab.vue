@@ -31,21 +31,6 @@ const canAddMember = computed(() =>
   props.communityType === CommunityType.Cooperation || props.communityType === CommunityType.Employee
 )
 
-function getRoleTagStyle(roleName: string): Record<string, string> {
-  const styleMap: Record<string, { bg: string, color: string }> = {
-    超级管理员: { bg: "#EBFAEF", color: "#52C41A" },
-    大使长: { bg: "#F5E8FF", color: "#9216FF" },
-    大使: { bg: "#FFEFF0", color: "#E6A23C" },
-    教师: { bg: "#E8F1FF", color: "#409EFF" },
-    学员: { bg: "#FFF4EA", color: "#FF8D28" },
-    机构人员: { bg: "#E6F9FB", color: "#00C3D0" },
-    财务: { bg: "#F0EEFE", color: "#6155F5" },
-    运营: { bg: "#F7F3EF", color: "#AC7F5E" }
-  }
-  const style = styleMap[roleName] || { bg: "#F0F0F0", color: "#666666" }
-  return { backgroundColor: style.bg, color: style.color, borderColor: style.bg }
-}
-
 async function fetchMembers() {
   if (!props.communityId) return
   loading.value = true
@@ -66,7 +51,6 @@ async function fetchMembers() {
 function getAvatarUrl(avatar: string): string {
   return avatar || "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png"
 }
-
 
 // ========== 牧养社区分组选人 ==========
 const empDialogVisible = ref(false)
@@ -109,10 +93,18 @@ function buildSearchParams(): { nickname?: string, email?: string } {
 }
 
 function resetEmpState() {
-  Object.keys(expandedKeys).forEach(k => { delete expandedKeys[k] })
-  Object.keys(membersCache).forEach(k => { delete membersCache[k] })
-  Object.keys(membersLoadingKeys).forEach(k => { delete membersLoadingKeys[k] })
-  Object.keys(selectedMemberMap).forEach(k => { delete selectedMemberMap[k] })
+  Object.keys(expandedKeys).forEach((k) => {
+    delete expandedKeys[k]
+  })
+  Object.keys(membersCache).forEach((k) => {
+    delete membersCache[k]
+  })
+  Object.keys(membersLoadingKeys).forEach((k) => {
+    delete membersLoadingKeys[k]
+  })
+  Object.keys(selectedMemberMap).forEach((k) => {
+    delete selectedMemberMap[k]
+  })
   groupSearchKeyword.value = ""
   allGroups.value = []
   originalMemberIds.value = new Set()
@@ -123,7 +115,7 @@ async function openEmpDialog() {
   empDialogVisible.value = true
   // 预填充已在社区的成员到右侧已选面板
   originalMemberIds.value = new Set(members.value.map(m => m.userId))
-  members.value.forEach(m => {
+  members.value.forEach((m) => {
     selectedMemberMap[String(m.userId)] = {
       id: m.userId,
       nickname: m.userName || m.nickname,
@@ -143,8 +135,12 @@ async function openEmpDialog() {
 async function fetchCandidateGroups() {
   groupsLoading.value = true
   // 搜索时折叠所有分组并清空缓存
-  Object.keys(expandedKeys).forEach(k => { delete expandedKeys[k] })
-  Object.keys(membersCache).forEach(k => { delete membersCache[k] })
+  Object.keys(expandedKeys).forEach((k) => {
+    delete expandedKeys[k]
+  })
+  Object.keys(membersCache).forEach((k) => {
+    delete membersCache[k]
+  })
   try {
     const res = await getCandidateGroupsApi(props.communityId, {
       type: props.communityType,
@@ -222,9 +218,13 @@ async function toggleGroupSelect(group: CandidateGroup) {
   const list = membersCache[key] || []
   const selectable = list.filter(m => !m.exists)
   if (isGroupFullySelected(group)) {
-    selectable.forEach(m => { delete selectedMemberMap[String(m.id)] })
+    selectable.forEach((m) => {
+      delete selectedMemberMap[String(m.id)]
+    })
   } else {
-    selectable.forEach(m => { selectedMemberMap[String(m.id)] = m })
+    selectable.forEach((m) => {
+      selectedMemberMap[String(m.id)] = m
+    })
   }
 }
 
@@ -243,9 +243,10 @@ function removeSelectedMember(id: number) {
 }
 
 function clearAllSelected() {
-  Object.keys(selectedMemberMap).forEach(k => { delete selectedMemberMap[k] })
+  Object.keys(selectedMemberMap).forEach((k) => {
+    delete selectedMemberMap[k]
+  })
 }
-
 
 async function handleEmpAddMembers() {
   empAddLoading.value = true
@@ -276,8 +277,12 @@ async function openAddDialog() {
   await openEmpDialog()
 }
 
-onMounted(() => { fetchMembers() })
-watch(() => props.communityId, () => { fetchMembers() })
+onMounted(() => {
+  fetchMembers()
+})
+watch(() => props.communityId, () => {
+  fetchMembers()
+})
 </script>
 
 <template>
@@ -509,10 +514,15 @@ watch(() => props.communityId, () => { fetchMembers() })
   padding: 12px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
-.member-info { flex: 1; min-width: 0; }
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
 
 .member-name {
   display: flex;
@@ -520,11 +530,20 @@ watch(() => props.communityId, () => { fetchMembers() })
   gap: 8px;
   margin-bottom: 4px;
 
-  .name { font-size: 14px; font-weight: 500; color: var(--el-text-color-primary); }
-  .role-tag { flex-shrink: 0; }
+  .name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+  }
+  .role-tag {
+    flex-shrink: 0;
+  }
 }
 
-.member-time { font-size: 13px; color: var(--el-text-color-secondary); }
+.member-time {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
 
 // ========== 事工社区弹窗 ==========
 .add-member-content {
@@ -547,11 +566,17 @@ watch(() => props.communityId, () => { fetchMembers() })
     .search-icon {
       cursor: pointer;
       color: var(--el-text-color-secondary);
-      &:hover { color: var(--el-color-primary); }
+      &:hover {
+        color: var(--el-color-primary);
+      }
     }
   }
 
-  .candidates-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .candidates-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
 
   .candidate-item {
     display: flex;
@@ -560,10 +585,18 @@ watch(() => props.communityId, () => { fetchMembers() })
     padding: 12px;
     cursor: pointer;
 
-    &:hover { background-color: var(--el-fill-color-light); }
-    &.is-disabled { cursor: not-allowed; opacity: 0.6; }
+    &:hover {
+      background-color: var(--el-fill-color-light);
+    }
+    &.is-disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
 
-    .candidate-info { flex: 1; min-width: 0; }
+    .candidate-info {
+      flex: 1;
+      min-width: 0;
+    }
 
     .candidate-name {
       display: flex;
@@ -571,11 +604,20 @@ watch(() => props.communityId, () => { fetchMembers() })
       gap: 8px;
       margin-bottom: 4px;
 
-      .name { font-size: 14px; font-weight: 500; color: var(--el-text-color-primary); }
-      .candidate-role { flex-shrink: 0; }
+      .name {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--el-text-color-primary);
+      }
+      .candidate-role {
+        flex-shrink: 0;
+      }
     }
 
-    .candidate-email { font-size: 13px; color: var(--el-text-color-secondary); }
+    .candidate-email {
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
+    }
   }
 }
 
@@ -596,7 +638,11 @@ watch(() => props.communityId, () => { fetchMembers() })
     color: var(--el-text-color-primary);
   }
 
-  .selected-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .selected-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
 
   .selected-item {
     display: flex;
@@ -618,7 +664,9 @@ watch(() => props.communityId, () => { fetchMembers() })
       cursor: pointer;
       color: var(--el-text-color-secondary);
       flex-shrink: 0;
-      &:hover { color: var(--el-color-danger); }
+      &:hover {
+        color: var(--el-color-danger);
+      }
     }
   }
 }
@@ -689,7 +737,9 @@ watch(() => props.communityId, () => { fetchMembers() })
   border-bottom: 1px solid var(--el-border-color-lighter);
   transition: background-color 0.15s;
 
-  &:hover { background-color: var(--el-fill-color-light); }
+  &:hover {
+    background-color: var(--el-fill-color-light);
+  }
 }
 
 .emp-group-name {
@@ -719,7 +769,9 @@ watch(() => props.communityId, () => { fetchMembers() })
   flex-shrink: 0;
   transition: transform 0.2s;
 
-  &.is-expanded { transform: rotate(90deg); }
+  &.is-expanded {
+    transform: rotate(90deg);
+  }
 }
 
 // 展开的成员列表
@@ -746,9 +798,13 @@ watch(() => props.communityId, () => { fetchMembers() })
   border-bottom: 1px solid var(--el-border-color-lighter);
   transition: background-color 0.15s;
 
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 
-  &:hover:not(.is-exists) { background-color: var(--el-fill-color); }
+  &:hover:not(.is-exists) {
+    background-color: var(--el-fill-color);
+  }
 
   &.is-exists {
     opacity: 0.6;
@@ -756,7 +812,10 @@ watch(() => props.communityId, () => { fetchMembers() })
   }
 }
 
-.emp-member-info { flex: 1; min-width: 0; }
+.emp-member-info {
+  flex: 1;
+  min-width: 0;
+}
 
 .emp-member-top {
   display: flex;
@@ -772,7 +831,9 @@ watch(() => props.communityId, () => { fetchMembers() })
   color: var(--el-text-color-primary);
 }
 
-.emp-label-tag { flex-shrink: 0; }
+.emp-label-tag {
+  flex-shrink: 0;
+}
 
 .emp-member-email {
   font-size: 12px;
@@ -812,10 +873,14 @@ watch(() => props.communityId, () => { fetchMembers() })
   padding: 10px 16px;
   border-bottom: 1px solid var(--el-border-color-lighter);
 
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
-.emp-selected-avatar { flex-shrink: 0; }
+.emp-selected-avatar {
+  flex-shrink: 0;
+}
 
 .emp-selected-name {
   flex: 1;
@@ -832,6 +897,8 @@ watch(() => props.communityId, () => { fetchMembers() })
   flex-shrink: 0;
   margin-left: 8px;
 
-  &:hover { color: var(--el-color-danger); }
+  &:hover {
+    color: var(--el-color-danger);
+  }
 }
 </style>

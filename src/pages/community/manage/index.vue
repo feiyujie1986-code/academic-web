@@ -261,12 +261,6 @@ function handleConversationCountUpdate(count: number) {
   conversationCount.value = count
 }
 
-// 判断是否为新社区（7天内创建）
-function isNewCommunity(createdAt: number): boolean {
-  const sevenDaysAgo = Date.now() / 1000 - 7 * 24 * 60 * 60
-  return createdAt > sevenDaysAgo
-}
-
 // 获取统计数据
 async function fetchStatistics() {
   try {
@@ -435,21 +429,18 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-            <el-button v-if="isEmployeeType" plain @click="openEditDialog">
-              编辑
-            </el-button>
-            <el-button
-              v-if="!isEmployeeType && !isCooperationType"
-              type="danger"
-              plain
-              :loading="deleteLoading"
-              @click="handleDeleteCommunity"
-            >
-              删除
-            </el-button>
-            <el-tag v-if="isNewCommunity(selectedCommunity.createdAt)" type="success" size="small" class="new-tag">
-              新
-            </el-tag>
+            <div class="header-actions">
+              <el-button class="action-btn edit-btn" @click="openEditDialog">
+                编辑
+              </el-button>
+              <el-button
+                class="action-btn delete-btn"
+                :loading="deleteLoading"
+                @click="handleDeleteCommunity"
+              >
+                删除
+              </el-button>
+            </div>
           </div>
 
           <!-- Tab 切换 -->
@@ -822,8 +813,40 @@ onMounted(() => {
         }
       }
 
-      .new-tag {
-        display: none;
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .action-btn {
+          height: 32px;
+          padding: 0 14px;
+          font-size: 13px;
+          border-radius: 4px;
+          border-width: 1px;
+          border-style: solid;
+          background-color: transparent;
+
+          &.edit-btn {
+            color: var(--el-color-primary);
+            border-color: var(--el-color-primary);
+
+            &:hover {
+              background-color: var(--el-color-primary-light-9);
+            }
+          }
+
+          &.delete-btn {
+            color: var(--el-text-color-regular);
+            border-color: var(--el-border-color);
+
+            &:hover {
+              color: var(--el-color-danger);
+              border-color: var(--el-color-danger);
+              background-color: var(--el-color-danger-light-9);
+            }
+          }
+        }
       }
     }
 

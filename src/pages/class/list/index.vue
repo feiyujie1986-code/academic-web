@@ -224,10 +224,8 @@ function scheduleClass(row: classListItem) {
               </el-button>
             </template>
           </el-table-column>
-          <el-table-column prop="seniorTeacherCount" label="大使数" width="80" />
           <el-table-column prop="teacherCount" label="教师数" width="80" />
           <el-table-column prop="studentCount" label="学员数" width="80" />
-          <el-table-column prop="organizationName" label="机构" width="150" />
           <el-table-column prop="createdDate" label="创建日期" width="120" />
           <el-table-column label="备注">
             <template #default="scope">

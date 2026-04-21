@@ -1569,7 +1569,9 @@ async function handleSingleLeaderCancelAuth(row: LeaderAuthorizationItem) {
 async function handleBatchLeaderAuthorize() {
   if (!currentDocument.value || leaderAuthSelectedRows.value.length === 0) return
   const targets = leaderAuthSelectedRows.value.filter(r => !r.authorized)
-  if (targets.length === 0) { ElMessage.warning("选中的组长都已授权"); return }
+  if (targets.length === 0) {
+    ElMessage.warning("选中的组长都已授权"); return
+  }
   try {
     await addAuthorization(currentDocument.value.id, { authType: 1, targetIds: targets.map(r => r.userId) })
     ElMessage.success(`成功授权 ${targets.length} 条记录`)
@@ -1582,7 +1584,9 @@ async function handleBatchLeaderAuthorize() {
 async function handleBatchLeaderCancelAuth() {
   if (!currentDocument.value || leaderAuthSelectedRows.value.length === 0) return
   const targets = leaderAuthSelectedRows.value.filter(r => r.authorized)
-  if (targets.length === 0) { ElMessage.warning("选中的组长都未授权"); return }
+  if (targets.length === 0) {
+    ElMessage.warning("选中的组长都未授权"); return
+  }
   try {
     await batchCancelAuthorization(currentDocument.value.id, { authType: 1, targetIds: targets.map(r => r.userId) })
     ElMessage.success(`成功取消授权 ${targets.length} 条记录`)

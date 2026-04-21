@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ConversationMemberCandidate, ConversationModel } from "@/api/im/conversation"
+import type { ConversationMember, ConversationMemberCandidate, ConversationModel } from "@/api/im/conversation"
 // 群组头像
 import conversationsIcon from "@@/assets/images/conversations-icon.png"
 // 状态图标
@@ -37,9 +37,16 @@ const loading = ref(false)
 const conversations = ref<ConversationModel[]>([])
 const total = ref(0)
 
-// 是否可以管理群组（牧养社区和事工社区可以创建/编辑/归档群组）
+// 是否可以创建群组（仅牧养社区和事工社区）
 const canManageGroup = computed(() =>
   props.communityType === CommunityType.Employee || props.communityType === CommunityType.Cooperation
+)
+
+// 是否可以编辑/归档群组（三种社区均支持）
+const canEditGroup = computed(() =>
+  props.communityType === CommunityType.Employee
+  || props.communityType === CommunityType.Cooperation
+  || props.communityType === CommunityType.Training
 )
 
 // 筛选状态：active | archived
@@ -222,7 +229,6 @@ function getAvatarUrl(avatar: string): string {
   return avatar || "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png"
 }
 
-
 // 保存群组
 async function handleSave() {
   if (!dialogForm.name.trim()) {
@@ -311,6 +317,30 @@ async function handleArchive(conversation: ConversationModel) {
   }
 }
 
+// ========== 查看群成员 ==========
+const memberDialogVisible = ref(false)
+const memberDialogLoading = ref(false)
+const memberDialogList = ref<ConversationMember[]>([])
+const memberDialogTitle = ref("")
+
+async function openMemberDialog(conversation: ConversationModel) {
+  memberDialogTitle.value = `${conversation.name} · 成员列表`
+  memberDialogList.value = []
+  memberDialogVisible.value = true
+  memberDialogLoading.value = true
+  try {
+    const res = await getConversationMembersApi(conversation.id, { page: 1, pageSize: 200 })
+    if (res.code === 0 && res.data) {
+      memberDialogList.value = res.data.list
+    }
+  } catch (err) {
+    console.error("获取群成员失败", err)
+    ElMessage.error("获取群成员失败")
+  } finally {
+    memberDialogLoading.value = false
+  }
+}
+
 onMounted(() => {
   fetchConversations()
 })
@@ -374,7 +404,7 @@ watch(() => props.communityId, () => {
             >
           </div>
           <div class="conversation-meta">
-            <span class="meta-item">
+            <span class="meta-item meta-item--clickable" @click="openMemberDialog(conversation)">
               <el-icon><User /></el-icon>
               {{ conversation.memberCount }}人
             </span>
@@ -385,8 +415,8 @@ watch(() => props.communityId, () => {
           </div>
         </div>
 
-        <!-- 操作按钮（仅员工社区、进行中状态、非公告群显示） -->
-        <div v-if="canManageGroup && conversation.status === 1 && conversation.type !== ConversationType.AnnouncementGroup" class="conversation-actions">
+        <!-- 操作按钮（进行中状态、非公告群显示编辑/归档） -->
+        <div v-if="canEditGroup && conversation.status === 1 && conversation.type !== ConversationType.AnnouncementGroup" class="conversation-actions">
           <el-button type="primary" link @click="openEditDialog(conversation)">
             编辑
           </el-button>
@@ -399,6 +429,69 @@ watch(() => props.communityId, () => {
 
     <!-- 空状态 -->
     <el-empty v-if="!loading && conversations.length === 0" description="暂无群组" />
+
+    <!-- 查看群成员对话框 -->
+    <el-dialog
+      v-model="memberDialogVisible"
+      :title="memberDialogTitle"
+      width="480px"
+      :close-on-click-modal="true"
+    >
+      <div v-loading="memberDialogLoading" class="member-dialog-body">
+        <div v-if="!memberDialogLoading && memberDialogList.length === 0" class="member-dialog-empty">
+          <el-empty description="暂无成员" :image-size="80" />
+        </div>
+        <div
+          v-for="member in memberDialogList"
+          :key="member.id"
+          class="member-dialog-item"
+        >
+          <el-avatar :size="36" :src="getAvatarUrl(member.userAvatar)" />
+          <span class="member-dialog-name">{{ member.nickname || member.userName }}</span>
+          <!-- 群内角色：群主/管理员 -->
+          <el-tag
+            v-if="member.memberRole === 1 || member.memberRole === 2"
+            size="small"
+            :type="member.memberRole === 1 ? 'warning' : 'info'"
+            class="member-dialog-role"
+          >
+            {{ member.memberRoleName }}
+          </el-tag>
+          <!-- 组长 -->
+          <el-tag
+            v-if="member.isOrgLeader"
+            size="small"
+            class="member-dialog-role"
+            :style="{ backgroundColor: '#e8f5e8', color: '#52c41a', borderColor: '#b7eb8f' }"
+          >
+            组长
+          </el-tag>
+          <!-- 班长 -->
+          <el-tag
+            v-if="member.isClassMonitor"
+            size="small"
+            class="member-dialog-role"
+            :style="{ backgroundColor: '#fff7e6', color: '#fa8c16', borderColor: '#ffd591' }"
+          >
+            班长
+          </el-tag>
+          <!-- 系统角色 -->
+          <el-tag
+            v-if="member.userRoleName"
+            size="small"
+            class="member-dialog-role"
+            :style="getUserTypeLabelCssStyle(member.userRoleName)"
+          >
+            {{ member.userRoleName }}
+          </el-tag>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="memberDialogVisible = false">
+          关闭
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- 创建/编辑群组对话框 -->
     <el-dialog
@@ -650,7 +743,55 @@ watch(() => props.communityId, () => {
     .el-icon {
       font-size: 14px;
     }
+
+    &--clickable {
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin-left: -6px;
+      transition:
+        background-color 0.15s,
+        color 0.15s;
+
+      &:hover {
+        background-color: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
+      }
+    }
   }
+}
+
+// 查看群成员弹窗
+.member-dialog-body {
+  max-height: 400px;
+  overflow-y: auto;
+  min-height: 80px;
+}
+
+.member-dialog-empty {
+  padding: 20px 0;
+}
+
+.member-dialog-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.member-dialog-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.member-dialog-role {
+  flex-shrink: 0;
 }
 
 .conversation-actions {
