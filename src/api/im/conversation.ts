@@ -30,6 +30,7 @@ export interface ConversationModel {
   communityId: number
   communityName: string
   name: string
+  isGroup?: boolean
   type: ConversationType
   typeName: string
   source: ConversationSource
@@ -154,6 +155,7 @@ export function getConversationDetailApi(id: number) {
 export interface CreateConversationParams {
   communityId: number
   name: string
+  isGroup?: boolean
   type?: ConversationType
   source?: ConversationSource
   sourceId?: number

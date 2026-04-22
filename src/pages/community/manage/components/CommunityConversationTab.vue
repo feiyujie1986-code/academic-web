@@ -94,7 +94,8 @@ const dialogMode = ref<"create" | "edit">("create")
 const editingConversationId = ref<number | null>(null)
 const dialogForm = reactive({
   name: "",
-  description: ""
+  description: "",
+  isGroup: true
 })
 
 // 选择群成员相关
@@ -111,6 +112,7 @@ function openCreateDialog() {
   editingConversationId.value = null
   dialogForm.name = ""
   dialogForm.description = ""
+  dialogForm.isGroup = true
   searchKeyword.value = ""
   selectedMembers.value = []
   originalMembers.value = []
@@ -124,6 +126,7 @@ async function openEditDialog(conversation: ConversationModel) {
   editingConversationId.value = conversation.id
   dialogForm.name = conversation.name
   dialogForm.description = conversation.announcement || ""
+  dialogForm.isGroup = conversation.isGroup ?? true
   searchKeyword.value = ""
   originalMembers.value = []
   selectedMembers.value = []
@@ -243,6 +246,7 @@ async function handleSave() {
       const res = await createConversationApi({
         communityId: props.communityId,
         name: dialogForm.name.trim(),
+        isGroup: dialogForm.isGroup,
         memberUserIds: selectedMembers.value.map(m => m.userId)
       })
       if (res.code === 0) {
@@ -506,6 +510,12 @@ watch(() => props.communityId, () => {
         </el-form-item>
         <el-form-item label="群组名称：" required>
           <el-input v-model="dialogForm.name" placeholder="请输入" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="是否小组：">
+          <el-radio-group v-model="dialogForm.isGroup">
+            <el-radio :value="true">是</el-radio>
+            <el-radio :value="false">否</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="描述：">
           <el-input
