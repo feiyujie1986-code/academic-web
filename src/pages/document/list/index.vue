@@ -40,8 +40,8 @@ const categoryByExtension: Record<string, string[]> = {
 }
 
 // 支持上传的文件格式
-const SUPPORTED_EXTENSIONS = ["xlsx", "xls", "csv", "txt", "mp3", "docx", "doc", "mp4", "mov", "pdf", "jpg", "png", "jpeg"]
-const SUPPORTED_ACCEPT = ".xlsx,.xls,.csv,.txt,.mp3,.docx,.doc,.mp4,.mov,.pdf,.jpg,.png,.jpeg"
+const SUPPORTED_EXTENSIONS = ["xlsx", "xls", "csv", "txt", "mp3", "docx", "doc", "mp4", "mov", "pdf", "jpg", "png", "jpeg", "ppt", "pptx", "epub", "mobi", "rtf"]
+const SUPPORTED_ACCEPT = ".xlsx,.xls,.csv,.txt,.mp3,.docx,.doc,.mp4,.mov,.pdf,.jpg,.png,.jpeg,.ppt,.pptx,.epub,.mobi,.rtf"
 
 // 检查文件格式是否支持
 function isFileSupported(filename: string): boolean {
@@ -1825,8 +1825,23 @@ onMounted(() => {
           将文件拖到此处，或<em>点击上传</em>
         </div>
         <template #tip>
-          <div class="el-upload__tip">
-            支持格式：xlsx、xls、csv、txt、mp3、docx、doc、mp4、mov、pdf、jpg、png、jpeg
+          <div class="el-upload__tip upload-format-tip">
+            <div class="upload-format-row">
+              <span class="upload-format-label">文档：</span>
+              <span>doc、docx、xls、xlsx、ppt、pptx、pdf、txt、rtf、csv</span>
+            </div>
+            <div class="upload-format-row">
+              <span class="upload-format-label">音视频：</span>
+              <span>mp3、mp4、mov</span>
+            </div>
+            <div class="upload-format-row">
+              <span class="upload-format-label">图片：</span>
+              <span>jpg、jpeg、png</span>
+            </div>
+            <div class="upload-format-row">
+              <span class="upload-format-label">电子书：</span>
+              <span>epub、mobi</span>
+            </div>
           </div>
         </template>
       </el-upload>
@@ -2847,6 +2862,24 @@ onMounted(() => {
     justify-content: flex-end;
     margin-top: 16px;
     padding: 12px 0;
+  }
+
+  .upload-format-tip {
+    margin-top: 8px;
+
+    .upload-format-row {
+      display: flex;
+      align-items: baseline;
+      line-height: 1.8;
+      color: #909399;
+      font-size: 12px;
+
+      .upload-format-label {
+        flex-shrink: 0;
+        color: #606266;
+        font-weight: 500;
+      }
+    }
   }
 
   // 多文件上传列表样式
