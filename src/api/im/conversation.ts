@@ -122,6 +122,38 @@ export interface ConversationMemberCandidate {
   isOrgLeader: boolean
 }
 
+// 命中用户（昵称搜索时返回）
+export interface MatchedUser {
+  userId: number
+  nickname: string
+  avatar: string
+  email: string
+  active: boolean
+}
+
+// 搜索响应（含可选 matchedUsers）
+export interface ConversationSearchData extends ConversationListData {
+  matchedUsers?: MatchedUser[]
+}
+
+// 历史消息
+export interface MessageItem {
+  id: string
+  fromUserId: number
+  fromNickname: string
+  fromAvatar: string
+  content: string
+  timestamp: string
+  rawStanza: string
+}
+
+// 历史消息响应
+export interface MessagesData {
+  list: MessageItem[]
+  cursor: string
+  hasMore: boolean
+}
+
 // 查询群组列表参数
 export interface GetConversationsParams {
   communityId?: number
@@ -130,13 +162,14 @@ export interface GetConversationsParams {
   syncStatus?: SyncStatus
   status?: number
   keyword?: string
+  memberNickname?: string
   page?: number
   pageSize?: number
 }
 
 // 获取群组列表
 export function getConversationsApi(params: GetConversationsParams) {
-  return request<ApiResponseData<ConversationListData>>({
+  return request<ApiResponseData<ConversationSearchData>>({
     url: "/v2/admin/im/conversations",
     method: "get",
     params
@@ -289,5 +322,47 @@ export function archiveConversationApi(conversationId: number) {
   return request<ApiResponseData<null>>({
     url: `/v2/admin/im/conversations/${conversationId}/archive`,
     method: "post"
+  })
+}
+
+// 解散群组
+export function dissolveConversationApi(conversationId: number) {
+  return request<ApiResponseData<null>>({
+    url: `/v2/admin/im/conversations/${conversationId}/dissolve`,
+    method: "post"
+  })
+}
+
+// 单人禁言
+export function muteMemberApi(conversationId: number, memberId: number, duration: number) {
+  return request<ApiResponseData<null>>({
+    url: `/v2/admin/im/conversations/${conversationId}/members/${memberId}/mute`,
+    method: "post",
+    data: { duration }
+  })
+}
+
+// 解除单人禁言
+export function unmuteMemberApi(conversationId: number, memberId: number) {
+  return request<ApiResponseData<null>>({
+    url: `/v2/admin/im/conversations/${conversationId}/members/${memberId}/mute`,
+    method: "delete"
+  })
+}
+
+// 获取历史消息
+export function getConversationMessagesApi(conversationId: number, params: { before?: string, limit?: number }) {
+  return request<ApiResponseData<MessagesData>>({
+    url: `/v2/admin/im/conversations/${conversationId}/messages`,
+    method: "get",
+    params
+  })
+}
+
+// 删除消息
+export function deleteConversationMessageApi(conversationId: number, messageId: string) {
+  return request<ApiResponseData<null>>({
+    url: `/v2/admin/im/conversations/${conversationId}/messages/${messageId}`,
+    method: "delete"
   })
 }

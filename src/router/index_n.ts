@@ -230,6 +230,30 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: "/chat",
+    component: Layouts,
+    meta: { hidden: true },
+    redirect: "/chat/list",
+    children: [
+      {
+        path: "list",
+        component: () => import("@/pages/chat/list/index.vue"),
+        name: "ChatList",
+        meta: { title: "群组维护" }
+      },
+      {
+        path: "detail/:id",
+        component: () => import("@/pages/chat/detail/index.vue"),
+        name: "ChatDetail",
+        meta: {
+          title: "群组详情",
+          level: 2,
+          parent: "ChatList"
+        }
+      }
+    ]
+  },
+  {
     path: "/notice",
     component: Layouts,
     meta: { hidden: true },
