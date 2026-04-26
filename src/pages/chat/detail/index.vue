@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { ConversationMember, ConversationModel, MessageItem } from "@/api/im/conversation"
 import { formatDateTime } from "@@/utils/datetime"
+import { getUserTypeLabelCssStyle } from "@@/utils/userTypeLabel"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { nextTick, onMounted, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
@@ -412,6 +413,27 @@ onMounted(async () => {
                   <span class="member-name">{{ member.nickname || member.userName }}</span>
                   <el-tag :type="getRoleTagType(member.memberRole)" size="small">
                     {{ getRoleLabel(member.memberRole) }}
+                  </el-tag>
+                  <el-tag
+                    v-if="member.userRoleName"
+                    size="small"
+                    :style="getUserTypeLabelCssStyle(member.userRoleName)"
+                  >
+                    {{ member.userRoleName }}
+                  </el-tag>
+                  <el-tag
+                    v-if="member.isOrgLeader"
+                    size="small"
+                    :style="{ backgroundColor: '#e8f5e8', color: '#52c41a', borderColor: '#b7eb8f' }"
+                  >
+                    组长
+                  </el-tag>
+                  <el-tag
+                    v-if="member.isClassMonitor"
+                    size="small"
+                    :style="{ backgroundColor: '#e6f7ff', color: '#1890ff', borderColor: '#91d5ff' }"
+                  >
+                    班长
                   </el-tag>
                   <el-tag v-if="member.muted" type="danger" size="small">
                     禁言中

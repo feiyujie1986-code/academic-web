@@ -513,8 +513,12 @@ watch(() => props.communityId, () => {
         </el-form-item>
         <el-form-item label="是否小组：">
           <el-radio-group v-model="dialogForm.isGroup">
-            <el-radio :value="true">是</el-radio>
-            <el-radio :value="false">否</el-radio>
+            <el-radio :value="true">
+              是
+            </el-radio>
+            <el-radio :value="false">
+              否
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="描述：">

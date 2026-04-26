@@ -266,7 +266,9 @@ function handleCurrentChange(value: number) {
       <template #header>
         <div style="display: flex; align-items: center; gap: 8px">
           <span style="font-size: 16px; font-weight: 600; color: #303133">{{ membersDialogTitle }}</span>
-          <el-tag type="danger" size="small" style="border-radius: 4px; font-weight: 500">成员</el-tag>
+          <el-tag type="danger" size="small" style="border-radius: 4px; font-weight: 500">
+            成员
+          </el-tag>
         </div>
       </template>
       <div v-loading="membersLoading" style="min-height: 60px">
@@ -281,7 +283,9 @@ function handleCurrentChange(value: number) {
             <div style="padding: 12px 0">
               <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px">
                 <span style="font-size: 15px; font-weight: 500; color: #1a1a1a">{{ member.nickname }}</span>
-                <el-tag v-if="member.isOrgLeader" type="success" size="small" style="border-radius: 4px">组长</el-tag>
+                <el-tag v-if="member.isOrgLeader" type="success" size="small" style="border-radius: 4px">
+                  组长
+                </el-tag>
                 <el-tag
                   v-for="label in member.userTypeLabels"
                   :key="label"
@@ -292,9 +296,13 @@ function handleCurrentChange(value: number) {
                     background: getUserTypeLabelStyle(label).background,
                     borderColor: getUserTypeLabelStyle(label).border,
                   }"
-                >{{ label }}</el-tag>
+                >
+                  {{ label }}
+                </el-tag>
               </div>
-              <div style="font-size: 13px; color: #999">{{ member.email }}</div>
+              <div style="font-size: 13px; color: #999">
+                {{ member.email }}
+              </div>
             </div>
             <el-divider v-if="index < membersList.length - 1" style="margin: 0" />
           </div>

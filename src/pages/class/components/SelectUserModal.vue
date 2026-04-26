@@ -308,7 +308,9 @@ function handleClose() {
               <template v-else>
                 <!-- 小组分段 -->
                 <template v-if="orgGroups.length > 0">
-                  <div class="section-label">小组</div>
+                  <div class="section-label">
+                    小组
+                  </div>
                   <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
                   <el-collapse :model-value="(expandedGroupKeys as any)" @update:model-value="(v: any) => updateExpandedKeys('org', v)">
                     <el-collapse-item
@@ -377,7 +379,9 @@ function handleClose() {
 
                 <!-- 角色分段 -->
                 <template v-if="roleGroups.length > 0">
-                  <div class="section-label">角色</div>
+                  <div class="section-label">
+                    角色
+                  </div>
                   <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
                   <el-collapse :model-value="(expandedGroupKeys as any)" @update:model-value="(v: any) => updateExpandedKeys('role', v)">
                     <el-collapse-item

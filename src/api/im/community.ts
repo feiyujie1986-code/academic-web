@@ -90,6 +90,7 @@ export interface CommunityMember {
   nickname: string
   joinedAt: number
   isOrgLeader: boolean
+  isClassMonitor: boolean
 }
 
 // 社区成员列表响应

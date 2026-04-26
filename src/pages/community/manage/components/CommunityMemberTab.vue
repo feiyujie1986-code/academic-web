@@ -308,6 +308,9 @@ watch(() => props.communityId, () => {
         <div class="member-info">
           <div class="member-name">
             <span class="name">{{ member.userName || member.nickname }}</span>
+            <el-tag :style="getUserTypeLabelCssStyle(member.userRoleName)" size="small" class="role-tag">
+              {{ member.userRoleName }}
+            </el-tag>
             <el-tag
               v-if="member.isOrgLeader"
               size="small"
@@ -316,8 +319,13 @@ watch(() => props.communityId, () => {
             >
               组长
             </el-tag>
-            <el-tag :style="getUserTypeLabelCssStyle(member.userRoleName)" size="small" class="role-tag">
-              {{ member.userRoleName }}
+            <el-tag
+              v-if="member.isClassMonitor"
+              size="small"
+              class="role-tag"
+              :style="{ backgroundColor: '#e6f7ff', color: '#1890ff', borderColor: '#91d5ff' }"
+            >
+              班长
             </el-tag>
           </div>
           <div class="member-time">
@@ -362,7 +370,9 @@ watch(() => props.communityId, () => {
 
           <div v-loading="groupsLoading" class="emp-group-container">
             <template v-for="section in groupedSections" :key="section.label">
-              <div class="emp-section-label">{{ section.label }}</div>
+              <div class="emp-section-label">
+                {{ section.label }}
+              </div>
 
               <div v-for="group in section.groups" :key="getGroupKey(group)">
                 <!-- 分组行 -->
@@ -386,7 +396,9 @@ watch(() => props.communityId, () => {
                 <!-- 展开的成员列表 -->
                 <div v-if="expandedKeys[getGroupKey(group)]" class="emp-member-container">
                   <div v-if="membersLoadingKeys[getGroupKey(group)]" class="emp-member-loading">
-                    <el-icon class="is-loading"><Loading /></el-icon>
+                    <el-icon class="is-loading">
+                      <Loading />
+                    </el-icon>
                     <span>加载中...</span>
                   </div>
                   <template v-else>
@@ -427,7 +439,9 @@ watch(() => props.communityId, () => {
                             已加入
                           </el-tag>
                         </div>
-                        <div class="emp-member-email">{{ member.email }}</div>
+                        <div class="emp-member-email">
+                          {{ member.email }}
+                        </div>
                       </div>
                     </div>
                     <el-empty
@@ -470,8 +484,12 @@ watch(() => props.communityId, () => {
       </div>
 
       <template #footer>
-        <el-button @click="empDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="empAddLoading" @click="handleEmpAddMembers">保存</el-button>
+        <el-button @click="empDialogVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="empAddLoading" @click="handleEmpAddMembers">
+          保存
+        </el-button>
       </template>
     </el-dialog>
   </div>
