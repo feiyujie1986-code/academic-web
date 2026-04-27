@@ -29,7 +29,15 @@ import {
   updateDocument
 } from "@/api/document/document"
 import { getOrganizationsApi } from "@/api/organization/organization"
+import { useChunkUpload } from "@/composables/useChunkUpload"
 import { useCloudUpload } from "@/composables/useCloudUpload"
+
+// mp3/mp4/mov 走直传，其余走分片上传
+const DIRECT_UPLOAD_EXTENSIONS = ["mp3", "mp4", "mov"]
+function isDirectUpload(filename: string): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase() || ""
+  return DIRECT_UPLOAD_EXTENSIONS.includes(ext)
+}
 
 // ==================== 文件分类映射 ====================
 
@@ -273,6 +281,42 @@ const {
   },
   onProgress: (progress: number) => {
     // 更新当前文件的进度
+    if (currentUploadIndex.value >= 0 && uploadFileList.value[currentUploadIndex.value]) {
+      uploadFileList.value[currentUploadIndex.value].progress = progress
+    }
+  }
+})
+
+// 分片上传（非媒体文件）
+const {
+  status: chunkUploadStatus,
+  start: startChunkUpload,
+  cancel: cancelChunkUpload,
+  reset: resetChunkUpload
+} = useChunkUpload({
+  onSuccess: async (result) => {
+    try {
+      await createFileRecord({
+        fileId: result.file.id,
+        parentId: currentParentId.value,
+        onConflict: "rename"
+      })
+      if (currentUploadIndex.value >= 0 && uploadFileList.value[currentUploadIndex.value]) {
+        uploadFileList.value[currentUploadIndex.value].status = "success"
+        uploadFileList.value[currentUploadIndex.value].progress = 100
+      }
+      await uploadNextFile()
+    } catch {
+      if (currentUploadIndex.value >= 0 && uploadFileList.value[currentUploadIndex.value]) {
+        uploadFileList.value[currentUploadIndex.value].status = "error"
+        uploadFileList.value[currentUploadIndex.value].errorMsg = "创建文件记录失败"
+      }
+      await uploadNextFile()
+    } finally {
+      resetChunkUpload()
+    }
+  },
+  onProgress: (progress: number) => {
     if (currentUploadIndex.value >= 0 && uploadFileList.value[currentUploadIndex.value]) {
       uploadFileList.value[currentUploadIndex.value].progress = progress
     }
@@ -660,27 +704,36 @@ async function uploadNextFile() {
   await uploadSingleFile(fileItem)
 }
 
-// 上传文件并替换已有文档（使用云存储直传）
+// 上传文件并替换已有文档
 async function uploadSingleFileWithReplace(fileItem: UploadFileItem, existingDocId: number) {
+  const onProgress = (progress: number) => { fileItem.progress = progress }
+
+  const onSuccess = async (fileId: number) => {
+    try {
+      await updateDocument(existingDocId, { fileId })
+      fileItem.status = "success"
+      fileItem.progress = 100
+    } catch {
+      fileItem.status = "error"
+      fileItem.errorMsg = "替换文件失败"
+    }
+    await uploadNextFile()
+  }
+
   try {
-    const { upload: startReplaceUpload } = useCloudUpload({
-      onSuccess: async (result) => {
-        try {
-          // 更新已有文档的 fileId
-          await updateDocument(existingDocId, { fileId: result.id })
-          fileItem.status = "success"
-          fileItem.progress = 100
-        } catch {
-          fileItem.status = "error"
-          fileItem.errorMsg = "替换文件失败"
-        }
-        await uploadNextFile()
-      },
-      onProgress: (progress: number) => {
-        fileItem.progress = progress
-      }
-    })
-    await startReplaceUpload(fileItem.file)
+    if (isDirectUpload(fileItem.file.name)) {
+      const { upload: startReplaceUpload } = useCloudUpload({
+        onSuccess: async result => onSuccess(result.id),
+        onProgress
+      })
+      await startReplaceUpload(fileItem.file)
+    } else {
+      const { start: startReplaceChunk } = useChunkUpload({
+        onSuccess: async result => onSuccess(result.file.id),
+        onProgress
+      })
+      await startReplaceChunk(fileItem.file)
+    }
   } catch {
     fileItem.status = "error"
     fileItem.errorMsg = "替换文件失败"
@@ -688,12 +741,14 @@ async function uploadSingleFileWithReplace(fileItem: UploadFileItem, existingDoc
   }
 }
 
-// 上传单个文件（使用云存储直传）
+// 上传单个文件：mp3/mp4/mov 走直传，其余走分片上传
 async function uploadSingleFile(fileItem: UploadFileItem) {
   try {
-    // 使用云存储直传
-    await startCloudUpload(fileItem.file)
-    // 上传的成功/失败在 useCloudUpload 回调中处理
+    if (isDirectUpload(fileItem.file.name)) {
+      await startCloudUpload(fileItem.file)
+    } else {
+      await startChunkUpload(fileItem.file)
+    }
   } catch {
     fileItem.status = "error"
     fileItem.errorMsg = "上传失败"
@@ -705,6 +760,9 @@ async function uploadSingleFile(fileItem: UploadFileItem) {
 function handleCancelUpload() {
   if (cloudUploadStatus.value !== "idle") {
     cancelCloudUpload()
+  }
+  if (chunkUploadStatus.value !== "idle") {
+    cancelChunkUpload()
   }
   isUploading.value = false
   currentUploadIndex.value = -1
