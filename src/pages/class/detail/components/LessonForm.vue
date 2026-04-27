@@ -22,7 +22,7 @@ import BlotFormatter from "quill-blot-formatter"
 import { computed, reactive, ref } from "vue"
 import { addLessonApi, editLessonApi } from "@/api/course/lesson"
 import { uploadImage } from "@/api/fileM/file"
-import { useCloudUpload } from "@/composables/useCloudUpload"
+import { useChunkUpload } from "@/composables/useChunkUpload"
 import ChunkVideoUpload from "./ChunkVideoUpload.vue"
 import { formatDate, LessonType, LessonTypeIcons, LessonTypeLabels } from "./tools"
 import "@vueup/vue-quill/dist/vue-quill.snow.css"
@@ -377,7 +377,7 @@ interface AttachmentFile {
   progress: number
   status: "uploading" | "success" | "error"
   fileMeta?: fileMeta
-  cancelFn?: () => Promise<void> // 取消上传函数
+  cancelFn?: () => void // 取消上传函数
 }
 
 // 附件文件列表（包含上传中和已完成的）
@@ -424,9 +424,8 @@ async function customUploadAttachment(options: UploadRequestOptions) {
     return
   }
 
-  const { upload, reset, cancel } = useCloudUpload({
+  const { start, reset, cancel } = useChunkUpload({
     onProgress: (progress) => {
-      // 更新进度
       const item = attachmentFiles.value.find(f => f.uid === uid)
       if (item) {
         item.progress = progress
@@ -446,13 +445,13 @@ async function customUploadAttachment(options: UploadRequestOptions) {
   attachmentFiles.value.push(fileItem)
 
   try {
-    const result = await upload(file)
+    const result = await start(file)
     if (result) {
       const meta: fileMeta = {
-        filename: result.filename,
-        size: result.size,
-        fullpath: result.fullpath,
-        md5: result.md5
+        filename: result.file.filename,
+        size: result.file.size,
+        fullpath: result.file.fullpath,
+        md5: result.file.md5
       }
       // 更新状态
       const item = attachmentFiles.value.find(f => f.uid === uid)
@@ -503,11 +502,7 @@ function syncFilesToFormState() {
 async function removeAttachmentFile(file: AttachmentFile) {
   // 如果文件正在上传，先取消上传
   if (file.status === "uploading" && file.cancelFn) {
-    try {
-      await file.cancelFn()
-    } catch {
-      // 忽略取消错误
-    }
+    file.cancelFn()
   }
 
   const index = attachmentFiles.value.findIndex(f => f.uid === file.uid)
