@@ -12,7 +12,14 @@ const props = defineProps<{
   visible: boolean
   excludeFullpaths: string[] // 已添加的文件路径，禁止重复选取
   limit: number // 本次最多可选数量
+  allowedExtensions?: string[] // 若设置，仅该扩展名的文件可被选取
 }>()
+
+function isExtensionAllowed(filename: string) {
+  if (!props.allowedExtensions || props.allowedExtensions.length === 0) return true
+  const ext = filename.split(".").pop()?.toLowerCase() || ""
+  return props.allowedExtensions.includes(ext)
+}
 
 const emit = defineEmits<{
   (e: "update:visible", value: boolean): void
@@ -47,9 +54,14 @@ function isSelected(doc: DocumentResponse) {
   return !!doc.file && selectedMap.value.has(doc.file.fullpath)
 }
 
+function isFormatDisabled(doc: DocumentResponse) {
+  return doc.type === 2 && !isExtensionAllowed(doc.name)
+}
+
 function isDisabled(doc: DocumentResponse) {
   if (doc.type !== 2) return false
   if (isExcluded(doc)) return true
+  if (isFormatDisabled(doc)) return true
   // 达到上限且当前项未被选中
   if (selectedCount.value >= props.limit && !isSelected(doc)) return true
   return false
@@ -135,7 +147,7 @@ function onPageChange(page: number) {
 // ──────────── Selection ────────────
 function toggleSelect(doc: DocumentResponse) {
   if (doc.type !== 2 || !doc.file) return
-  if (isExcluded(doc)) return
+  if (isExcluded(doc) || isFormatDisabled(doc)) return
 
   const key = doc.file.fullpath
   if (selectedMap.value.has(key)) {
@@ -261,6 +273,7 @@ function handleClose() {
           <span class="item-name" :title="doc.name">{{ doc.name }}</span>
           <span class="item-size">{{ doc.file ? formatFileSize(doc.file.size) : '-' }}</span>
           <span v-if="isExcluded(doc)" class="item-tag-excluded">已添加</span>
+          <span v-else-if="isFormatDisabled(doc)" class="item-tag-disabled">格式不支持</span>
         </template>
       </div>
     </div>
@@ -405,6 +418,15 @@ function handleClose() {
     font-size: 11px;
     color: var(--el-color-success);
     background: var(--el-color-success-light-9);
+    padding: 1px 6px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .item-tag-disabled {
+    font-size: 11px;
+    color: var(--el-text-color-placeholder);
+    background: var(--el-fill-color);
     padding: 1px 6px;
     border-radius: 10px;
     flex-shrink: 0;

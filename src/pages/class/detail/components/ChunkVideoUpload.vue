@@ -3,6 +3,7 @@ import type { fileMeta } from "@/api/course/lesson"
 import type { UploadStatus } from "@/composables/useCloudUpload"
 import { computed, ref, watch } from "vue"
 import { useCloudUpload } from "@/composables/useCloudUpload"
+import DocumentPickerModal from "./DocumentPickerModal.vue"
 
 const props = defineProps<{
   modelValue: fileMeta
@@ -214,6 +215,23 @@ function handleRemove() {
   emit("remove")
 }
 
+// ── 资料中心选取 ──
+const pickerVisible = ref(false)
+const videoExtensions = ["mp4", "mov", "avi", "mkv", "wmv", "flv", "webm", "m4v", "mpeg", "mpg", "3gp"]
+
+function openPicker() {
+  pickerVisible.value = true
+}
+
+function onPickerConfirm(files: fileMeta[]) {
+  if (!files.length) return
+  const file = files[0]
+  reset()
+  currentFileName.value = ""
+  currentFile.value = null
+  emit("update:modelValue", file)
+}
+
 // 监听外部值变化（编辑模式或重置）
 watch(
   () => props.modelValue,
@@ -247,6 +265,10 @@ function getDisplayStatusText(currentStatus: UploadStatus): string {
       <el-button @click="handleSelectFile">
         <el-icon><Upload /></el-icon>
         上传视频
+      </el-button>
+      <el-button @click="openPicker">
+        <el-icon><FolderOpened /></el-icon>
+        从资料中心获取
       </el-button>
       <input
         ref="fileInputRef"
@@ -314,6 +336,15 @@ function getDisplayStatusText(currentStatus: UploadStatus): string {
         <span>{{ getDisplayStatusText(status) }}</span>
       </div>
     </div>
+
+    <!-- 资料中心选取弹窗 -->
+    <DocumentPickerModal
+      v-model:visible="pickerVisible"
+      :exclude-fullpaths="[]"
+      :limit="1"
+      :allowed-extensions="videoExtensions"
+      @confirm="onPickerConfirm"
+    />
   </div>
 </template>
 
@@ -323,7 +354,9 @@ function getDisplayStatusText(currentStatus: UploadStatus): string {
 }
 
 .upload-trigger {
-  display: inline-block;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .upload-file-item {
