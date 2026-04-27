@@ -24,6 +24,7 @@ import { addLessonApi, editLessonApi } from "@/api/course/lesson"
 import { uploadImage } from "@/api/fileM/file"
 import { useChunkUpload } from "@/composables/useChunkUpload"
 import ChunkVideoUpload from "./ChunkVideoUpload.vue"
+import DocumentPickerModal from "./DocumentPickerModal.vue"
 import { formatDate, LessonType, LessonTypeIcons, LessonTypeLabels } from "./tools"
 import "@vueup/vue-quill/dist/vue-quill.snow.css"
 
@@ -382,6 +383,38 @@ interface AttachmentFile {
 
 // 附件文件列表（包含上传中和已完成的）
 const attachmentFiles = ref<AttachmentFile[]>([])
+
+// 资料中心选取弹窗
+const pickerVisible = ref(false)
+const pickerExcludeFullpaths = computed(() =>
+  attachmentFiles.value.filter(f => f.fileMeta).map(f => f.fileMeta!.fullpath)
+)
+const pickerLimit = computed(() =>
+  3 - attachmentFiles.value.filter(f => f.status === "success").length
+)
+
+function openDocumentPicker() {
+  if (pickerLimit.value <= 0) {
+    ElMessage.warning("最多只能添加3个附件")
+    return
+  }
+  pickerVisible.value = true
+}
+
+function onPickerConfirm(files: { filename: string, fullpath: string, size: number, md5: string }[]) {
+  for (const file of files) {
+    if (attachmentFiles.value.filter(f => f.status === "success").length >= 3) break
+    attachmentFiles.value.push({
+      uid: `doc-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: file.filename,
+      size: file.size,
+      progress: 100,
+      status: "success",
+      fileMeta: file
+    })
+  }
+  syncFilesToFormState()
+}
 
 // 同步 formState.attachments 到 attachmentFiles（编辑模式加载已有附件）
 function syncAttachmentsToFiles() {
@@ -905,22 +938,39 @@ const dynamicLabels = computed(() => ({
 
       <el-form-item :label="dynamicLabels.attachmentField">
         <div class="attachment-upload-wrapper">
-          <!-- el-upload 只负责触发上传，不显示文件列表 -->
-          <el-upload
-            :show-file-list="false"
-            :http-request="customUploadAttachment"
-            :before-upload="beforeAttachmentUpload"
-            :disabled="attachmentFiles.length >= 3"
-            multiple
-          >
-            <el-button :disabled="attachmentFiles.length >= 3">
-              <el-icon><Upload /></el-icon>
-              {{ dynamicLabels.uploadButton }}
+          <!-- 操作按钮行 -->
+          <div class="attachment-actions">
+            <el-upload
+              :show-file-list="false"
+              :http-request="customUploadAttachment"
+              :before-upload="beforeAttachmentUpload"
+              :disabled="attachmentFiles.filter(f => f.status === 'success').length >= 3"
+              multiple
+            >
+              <el-button :disabled="attachmentFiles.filter(f => f.status === 'success').length >= 3">
+                <el-icon><Upload /></el-icon>
+                {{ dynamicLabels.uploadButton }}
+              </el-button>
+            </el-upload>
+            <el-button
+              :disabled="pickerLimit <= 0"
+              @click="openDocumentPicker"
+            >
+              <el-icon><FolderOpened /></el-icon>
+              从资料中心选取
             </el-button>
-          </el-upload>
-          <div class="attachment-tip">
-            附件最多可上传3个
           </div>
+          <div class="attachment-tip">
+            附件最多可添加3个
+          </div>
+
+          <!-- 资料中心选取弹窗 -->
+          <DocumentPickerModal
+            v-model:visible="pickerVisible"
+            :exclude-fullpaths="pickerExcludeFullpaths"
+            :limit="pickerLimit"
+            @confirm="onPickerConfirm"
+          />
 
           <!-- 自定义文件列表 -->
           <div v-if="attachmentFiles.length > 0" class="attachment-file-list">
@@ -1126,6 +1176,12 @@ const dynamicLabels = computed(() => ({
 // 附件上传容器样式
 .attachment-upload-wrapper {
   width: 100%;
+}
+
+.attachment-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .attachment-tip {
