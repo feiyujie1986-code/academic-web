@@ -13,6 +13,7 @@ const props = defineProps({
 const options = reactive([
   { key: "menu-home", label: "menu-home" },
   { key: "menu-class", label: "menu-class" },
+  { key: "menu-chat", label: "menu-chat" },
   { key: "menu-course", label: "menu-course" },
   { key: "menu-member", label: "menu-member" },
   { key: "menu-organization", label: "menu-organization" },
@@ -42,6 +43,7 @@ function getValidIconName(label: string) {
   const validNames = [
     "menu-home",
     "menu-class",
+    "menu-chat",
     "menu-course",
     "menu-member",
     "menu-organization",
@@ -80,7 +82,7 @@ function getValidIconName(label: string) {
 // }
 
 function iconForOption(option: typeof options[0]) {
-  return computed(() => getValidIconName(option.label) as "menu-home" | "menu-class" | "menu-course" | "menu-member" | "menu-organization" | "menu-document" | "menu-feedback" | "menu-community" | "menu-notification" | "menu-settings" | "access" | "bug" | "config" | "dashboard" | "file" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "link" | "load" | "lock" | "menu" | "monitor" | "network" | "plus" | "search" | "setting")
+  return computed(() => getValidIconName(option.label) as "menu-home" | "menu-class" | "menu-chat" | "menu-course" | "menu-member" | "menu-organization" | "menu-document" | "menu-feedback" | "menu-community" | "menu-notification" | "menu-settings" | "access" | "bug" | "config" | "dashboard" | "file" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "link" | "load" | "lock" | "menu" | "monitor" | "network" | "plus" | "search" | "setting")
 }
 </script>
 
