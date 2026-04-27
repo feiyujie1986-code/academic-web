@@ -49,6 +49,11 @@ const canEditGroup = computed(() =>
   || props.communityType === CommunityType.Training
 )
 
+// 成长社区(Training)和事工社区(Cooperation)不展示「是否小组」字段
+const showIsGroupField = computed(() =>
+  props.communityType !== CommunityType.Training && props.communityType !== CommunityType.Cooperation
+)
+
 // 筛选状态：active | archived
 const filterStatus = ref("active")
 
@@ -511,7 +516,7 @@ watch(() => props.communityId, () => {
         <el-form-item label="群组名称：" required>
           <el-input v-model="dialogForm.name" placeholder="请输入" maxlength="50" show-word-limit />
         </el-form-item>
-        <el-form-item label="是否小组：">
+        <el-form-item v-if="showIsGroupField" label="是否小组：">
           <el-radio-group v-model="dialogForm.isGroup">
             <el-radio :value="true">
               是
