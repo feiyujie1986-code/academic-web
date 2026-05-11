@@ -12,6 +12,17 @@ export interface FileInfo {
   provider?: string
 }
 
+// 视频转码状态
+export type TranscodeStatus = "pending" | "processing" | "completed" | "failed"
+
+// 视频信息（仅视频文件有此字段）
+export interface VideoInfo {
+  id: number
+  vodVideoId: string
+  transcodeStatus: TranscodeStatus
+  originalFileMd5: string
+}
+
 // 分类信息
 export interface CategoryInfo {
   id: number
@@ -33,6 +44,7 @@ export interface DocumentResponse {
   description?: string
   sort: number
   file?: FileInfo
+  video?: VideoInfo // 视频文件才有，非视频为 null/undefined
   createdBy: number
   createdAt: number
   updatedAt: number
@@ -233,6 +245,18 @@ export function deleteDocument(id: number) {
   return request<ApiResponseData<null>>({
     url: `/v2/admin/documents/${id}`,
     method: "delete"
+  })
+}
+
+/**
+ * 查询视频转码进度
+ * 视频上传后 Cloudflare Stream 异步转码，轮询此接口直到 transcodeStatus 为 completed
+ */
+export function getVideoProgress(videoId: number) {
+  return request<ApiResponseData<{ id: number, transcodeStatus: TranscodeStatus }>>({
+    url: `/v2/admin/videos/${videoId}/progress`,
+    method: "get",
+    silent: true
   })
 }
 

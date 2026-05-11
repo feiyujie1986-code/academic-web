@@ -10,7 +10,7 @@ import filePdfIcon from "@@/assets/images/file-pdf-icon.png"
 import filePptIcon from "@@/assets/images/file-ppt-icon.png"
 import fileTextIcon from "@@/assets/images/file-text-icon.png"
 import fileWordIcon from "@@/assets/images/file-word-icon.png"
-import { nextTick, onMounted, ref } from "vue"
+import { nextTick, onMounted, onUnmounted, ref } from "vue"
 import {
   addAuthorization,
   batchCancelAuthorization,
@@ -19,6 +19,7 @@ import {
   getOrgAuthorizations,
   getUserAuthorizations
 } from "@/api/document/authorization"
+import type { TranscodeStatus } from "@/api/document/document"
 import {
   checkDuplicates,
   createFileRecord,
@@ -26,6 +27,7 @@ import {
   deleteDocument,
   getDocuments,
   getFolderTree,
+  getVideoProgress,
   updateDocument
 } from "@/api/document/document"
 import { getOrganizationsApi } from "@/api/organization/organization"
@@ -257,11 +259,19 @@ const {
 } = useCloudUpload({
   onSuccess: async (result) => {
     try {
-      await createFileRecord({
+      const docRes = await createFileRecord({
         fileId: result.id,
         parentId: currentParentId.value,
         onConflict: "rename"
       })
+      // 视频文件：将新文档加入转码状态轮询
+      if (docRes.code === 0 && docRes.data.video) {
+        const { id: docId, video } = docRes.data
+        watchTranscode(docId, video.id, video.transcodeStatus)
+        // 同步到列表（下次 fetchDocuments 会覆盖，但提前插入避免轮询结果找不到文档）
+        const existing = documentList.value.find(d => d.id === docId)
+        if (existing) existing.video = video
+      }
       // 标记当前文件上传成功
       if (currentUploadIndex.value >= 0 && uploadFileList.value[currentUploadIndex.value]) {
         uploadFileList.value[currentUploadIndex.value].status = "success"
@@ -394,6 +404,7 @@ async function fetchDocuments() {
     if (res.code === 0) {
       documentList.value = res.data.list
       total.value = res.data.total
+      syncPollingFromList()
     }
   } catch {
     ElMessage.error("获取资料列表失败")
@@ -1635,10 +1646,76 @@ function formatTime(timestamp: number): string {
   return `${year}/${month}/${day} ${hour}:${minute}:${second}`
 }
 
+// ==================== 视频转码轮询 ====================
+
+// docId → transcodeStatus（用于模板渲染）
+const transcodeStatusMap = ref<Record<number, TranscodeStatus>>({})
+// docId → videoId（待轮询的视频）
+const pollingVideoMap: Map<number, number> = new Map()
+let pollingTimer: ReturnType<typeof setInterval> | null = null
+
+const POLL_INTERVAL = 5000
+
+function stopPolling() {
+  if (pollingTimer) {
+    clearInterval(pollingTimer)
+    pollingTimer = null
+  }
+}
+
+function startPolling() {
+  if (pollingTimer) return
+  pollingTimer = setInterval(async () => {
+    if (pollingVideoMap.size === 0) {
+      stopPolling()
+      return
+    }
+    const entries = [...pollingVideoMap.entries()]
+    await Promise.allSettled(entries.map(async ([docId, videoId]) => {
+      try {
+        const res = await getVideoProgress(videoId)
+        if (res.code !== 0) return
+        const status = res.data.transcodeStatus
+        transcodeStatusMap.value = { ...transcodeStatusMap.value, [docId]: status }
+        if (status === "completed" || status === "failed") {
+          pollingVideoMap.delete(docId)
+          // 同步更新列表数据中的 video.transcodeStatus，避免刷新页面时闪烁
+          const doc = documentList.value.find(d => d.id === docId)
+          if (doc?.video) doc.video.transcodeStatus = status
+        }
+      } catch {
+        // 轮询失败静默忽略，下次继续
+      }
+    }))
+  }, POLL_INTERVAL)
+}
+
+// 将文档加入转码轮询（上传成功 / 页面加载时调用）
+function watchTranscode(docId: number, videoId: number, status: TranscodeStatus) {
+  transcodeStatusMap.value = { ...transcodeStatusMap.value, [docId]: status }
+  if (status === "pending" || status === "processing") {
+    pollingVideoMap.set(docId, videoId)
+    startPolling()
+  }
+}
+
+// 从列表数据同步所有需要轮询的视频（换页、刷新时调用）
+function syncPollingFromList() {
+  documentList.value.forEach((doc) => {
+    if (doc.video) {
+      watchTranscode(doc.id, doc.video.id, doc.video.transcodeStatus)
+    }
+  })
+}
+
 // ==================== 生命周期 ====================
 
 onMounted(() => {
   fetchDocuments()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 
@@ -1819,9 +1896,27 @@ onMounted(() => {
             <span class="cell-text">{{ row.isNewFolder ? "-" : (row.type === 1 ? "-" : (row.file ? formatFileSize(row.file.size) : "-")) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="类型" width="100">
+        <el-table-column label="类型" width="130">
           <template #default="{ row }">
             <span class="cell-text">{{ row.isNewFolder ? "文件夹" : row.typeName }}</span>
+            <template v-if="!row.isNewFolder && transcodeStatusMap[row.id]">
+              <el-tag
+                v-if="transcodeStatusMap[row.id] === 'pending' || transcodeStatusMap[row.id] === 'processing'"
+                size="small"
+                type="warning"
+                style="margin-left: 4px;"
+              >
+                转码中
+              </el-tag>
+              <el-tag
+                v-else-if="transcodeStatusMap[row.id] === 'failed'"
+                size="small"
+                type="danger"
+                style="margin-left: 4px;"
+              >
+                转码失败
+              </el-tag>
+            </template>
           </template>
         </el-table-column>
         <el-table-column label="上传时间" width="180" sortable :sort-method="sortByCreatedAt">
