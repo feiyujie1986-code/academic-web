@@ -1,4 +1,5 @@
 import type { UploadFileInfo } from "@/api/fileM/direct"
+import type { StreamVideoInfo } from "@/api/fileM/multipart"
 import SparkMD5 from "spark-md5"
 import { computed, ref } from "vue"
 import {
@@ -14,7 +15,8 @@ import {
   getPartUrl,
   initMultipartUpload,
   reportPartComplete,
-  uploadPartToCloudWithCancel
+  uploadPartToCloudWithCancel,
+  uploadToStreamWithCancel
 } from "@/api/fileM/multipart"
 
 // 上传状态
@@ -88,6 +90,8 @@ export interface CloudUploadOptions {
   onStatusChange?: (status: UploadStatus) => void
   onSuccess?: (result: UploadFileInfo) => void
   onError?: (error: Error) => void
+  // 视频上传完成后触发（transcodeStatus 初始为 "processing"，需轮询等待 "completed"）
+  onVideoCreated?: (video: StreamVideoInfo) => void
 }
 
 // 获取断点存储 key
@@ -174,7 +178,7 @@ async function calculateFileMD5(
  * 云存储上传 Composable
  */
 export function useCloudUpload(options: CloudUploadOptions = {}) {
-  const { concurrency = 3, onProgress, onStatusChange, onSuccess, onError } = options
+  const { concurrency = 3, onProgress, onStatusChange, onSuccess, onError, onVideoCreated } = options
 
   // 状态
   const status = ref<UploadStatus>("idle")
@@ -357,6 +361,15 @@ export function useCloudUpload(options: CloudUploadOptions = {}) {
         return instantFile
       }
 
+      // Cloudflare Stream 单次上传
+      if (uploadMethod === "stream") {
+        const { streamUploadUrl, uploadId: streamUploadId } = initRes.data
+        if (!streamUploadUrl || !streamUploadId) {
+          throw new Error("Stream 上传初始化数据不完整")
+        }
+        return doStreamUpload(streamUploadId, streamUploadUrl)
+      }
+
       uploadId = initRes.data.uploadId!
       objectKey = initRes.data.objectKey!
       partSize = initRes.data.partSize || DEFAULT_PART_SIZE
@@ -364,6 +377,43 @@ export function useCloudUpload(options: CloudUploadOptions = {}) {
       uploadedParts = []
 
       return doMultipartUpload()
+    }
+
+    async function doStreamUpload(streamUploadId: string, streamUploadUrl: string): Promise<UploadFileInfo> {
+      setStatus("uploading")
+
+      const { promise, cancel } = uploadToStreamWithCancel(
+        streamUploadUrl,
+        file,
+        (percent) => {
+          // 上传进度占 5%-95%
+          setProgress(5 + Math.round(percent * 0.9))
+        }
+      )
+
+      activeUploads = [{ cancel }]
+      await promise
+
+      if (isCancelled) {
+        throw new Error("上传已取消")
+      }
+
+      // 通知后端完成
+      setStatus("completing")
+      setProgress(95)
+
+      const completeRes = await completeMultipartUpload(streamUploadId)
+      if (completeRes.code !== 0 || !completeRes.data) {
+        throw new Error(completeRes.msg || "视频上传完成确认失败")
+      }
+
+      if (completeRes.data.video) {
+        onVideoCreated?.(completeRes.data.video)
+      }
+
+      setProgress(100)
+      setStatus("completed")
+      return completeRes.data.file
     }
 
     async function doMultipartUpload(): Promise<UploadFileInfo> {
@@ -560,14 +610,15 @@ export function useCloudUpload(options: CloudUploadOptions = {}) {
         throw new Error("上传已取消")
       }
 
-      // 根据文件大小选择上传方式
+      // 根据文件类型和大小选择上传方式
+      // 视频文件始终走 multipart init，后端根据 mimeType 决定返回 "stream" 还是 "multipart"
       let uploadResult: UploadFileInfo
 
-      if (file.size < MULTIPART_THRESHOLD) {
-        // 直传（< 5MB）
+      if (file.size < MULTIPART_THRESHOLD && !file.type.startsWith("video/")) {
+        // 非视频小文件直传（< 5MB）
         uploadResult = await uploadDirect(file, fileMd5)
       } else {
-        // 分片上传（>= 5MB）
+        // 视频文件或大文件走 multipart init
         uploadResult = await uploadMultipart(file, fileMd5)
       }
 

@@ -12,11 +12,14 @@ export interface InitMultipartUploadReq {
 // 分片上传初始化响应
 export interface MultipartUploadInitRes {
   uploadId?: string
-  uploadMethod: "multipart" | "instant"
+  uploadMethod: "multipart" | "instant" | "stream"
   objectKey?: string
   partSize?: number
   totalParts?: number
   expiresAt?: number
+  // stream 上传专用字段
+  streamUid?: string
+  streamUploadUrl?: string
   file?: {
     id: number
     filename: string
@@ -65,6 +68,12 @@ export interface PartCompleteRes {
   progress: UploadProgress
 }
 
+// 视频信息（Stream 上传完成后返回）
+export interface StreamVideoInfo {
+  vodVideoId: string
+  transcodeStatus: "pending" | "processing" | "completed" | "failed"
+}
+
 // 完成分片上传响应
 export interface MultipartCompleteRes {
   file: {
@@ -75,6 +84,7 @@ export interface MultipartCompleteRes {
     md5: string
     provider?: string
   }
+  video?: StreamVideoInfo
 }
 
 // 分片上传状态响应
@@ -222,6 +232,50 @@ export function uploadPartToCloud(
     // 发送分片
     xhr.send(chunk)
   })
+}
+
+/**
+ * POST 整个视频文件到 Cloudflare Stream 上传 URL（单次上传，无需分片）
+ * @param uploadUrl Stream 一次性上传 URL
+ * @param file 视频文件
+ * @param onProgress 进度回调 (0-100)
+ */
+export function uploadToStreamWithCancel(
+  uploadUrl: string,
+  file: File,
+  onProgress?: (progress: number) => void
+): { promise: Promise<void>, cancel: () => void } {
+  const xhr = new XMLHttpRequest()
+
+  const promise = new Promise<void>((resolve, reject) => {
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        const percent = Math.round((event.loaded / event.total) * 100)
+        onProgress(percent)
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+      } else {
+        reject(new Error(`视频上传失败: ${xhr.status} ${xhr.statusText}`))
+      }
+    }
+
+    xhr.onerror = () => reject(new Error("网络错误，视频上传失败"))
+    xhr.ontimeout = () => reject(new Error("视频上传超时"))
+    xhr.onabort = () => reject(new Error("上传已取消"))
+
+    xhr.open("POST", uploadUrl, true)
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4")
+    xhr.send(file)
+  })
+
+  return {
+    promise,
+    cancel: () => xhr.abort()
+  }
 }
 
 /**
