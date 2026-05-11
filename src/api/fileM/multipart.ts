@@ -1,3 +1,4 @@
+import * as tus from "tus-js-client"
 import { request } from "@/http/axios_n"
 
 // 初始化分片上传请求参数
@@ -235,8 +236,9 @@ export function uploadPartToCloud(
 }
 
 /**
- * POST 整个视频文件到 Cloudflare Stream 上传 URL（单次上传，无需分片）
- * @param uploadUrl Stream 一次性上传 URL
+ * 使用 TUS 协议上传视频到 Cloudflare Stream
+ * Cloudflare Stream direct_upload URL 要求 TUS（PATCH + Tus-Resumable/Upload-Offset headers）
+ * @param uploadUrl Stream TUS 上传 URL
  * @param file 视频文件
  * @param onProgress 进度回调 (0-100)
  */
@@ -245,36 +247,29 @@ export function uploadToStreamWithCancel(
   file: File,
   onProgress?: (progress: number) => void
 ): { promise: Promise<void>, cancel: () => void } {
-  const xhr = new XMLHttpRequest()
+  let tusUpload: tus.Upload | null = null
 
   const promise = new Promise<void>((resolve, reject) => {
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        const percent = Math.round((event.loaded / event.total) * 100)
-        onProgress(percent)
-      }
-    }
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve()
-      } else {
-        reject(new Error(`视频上传失败: ${xhr.status} ${xhr.statusText}`))
-      }
-    }
-
-    xhr.onerror = () => reject(new Error("网络错误，视频上传失败"))
-    xhr.ontimeout = () => reject(new Error("视频上传超时"))
-    xhr.onabort = () => reject(new Error("上传已取消"))
-
-    xhr.open("POST", uploadUrl, true)
-    xhr.setRequestHeader("Content-Type", file.type || "video/mp4")
-    xhr.send(file)
+    tusUpload = new tus.Upload(file, {
+      // uploadUrl：直接向已有 URL 续传（不让 tus 自己创建上传任务）
+      uploadUrl,
+      chunkSize: 50 * 1024 * 1024, // 50MB，Cloudflare Stream 推荐值
+      retryDelays: [0, 3000, 5000, 10000],
+      onProgress: (bytesUploaded, bytesTotal) => {
+        if (onProgress) {
+          const percent = Math.round((bytesUploaded / bytesTotal) * 100)
+          onProgress(percent)
+        }
+      },
+      onSuccess: () => resolve(),
+      onError: (err) => reject(new Error(err instanceof Error ? err.message : "视频上传失败"))
+    })
+    tusUpload.start()
   })
 
   return {
     promise,
-    cancel: () => xhr.abort()
+    cancel: () => tusUpload?.abort()
   }
 }
 
