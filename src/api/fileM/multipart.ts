@@ -268,9 +268,12 @@ export function uploadToStreamWithCancel(
     xhr.ontimeout = () => reject(new Error("视频上传超时"))
     xhr.onabort = () => reject(new Error("上传已取消"))
 
+    const formData = new FormData()
+    formData.append("file", file)
+
     xhr.open("POST", uploadUrl, true)
-    xhr.setRequestHeader("Content-Type", file.type || "video/mp4")
-    xhr.send(file)
+    // 不手动设 Content-Type，让浏览器自动带 multipart/form-data boundary
+    xhr.send(formData)
   })
 
   return {
