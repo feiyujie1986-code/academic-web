@@ -1699,7 +1699,8 @@ function watchTranscode(docId: number, videoId: number, status: TranscodeStatus)
   }
 }
 
-// 从列表数据同步所有需要轮询的视频（换页、刷新时调用）
+// 从列表数据同步所有视频转码状态（换页、刷新时调用）
+// pending/processing → 加入轮询；completed/failed → 直接写入 map 用于展示
 function syncPollingFromList() {
   documentList.value.forEach((doc) => {
     if (doc.video) {
@@ -1896,26 +1897,28 @@ onUnmounted(() => {
             <span class="cell-text">{{ row.isNewFolder ? "-" : (row.type === 1 ? "-" : (row.file ? formatFileSize(row.file.size) : "-")) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="类型" width="130">
+        <el-table-column label="类型" width="110">
           <template #default="{ row }">
             <span class="cell-text">{{ row.isNewFolder ? "文件夹" : row.typeName }}</span>
             <template v-if="!row.isNewFolder && transcodeStatusMap[row.id]">
-              <el-tag
-                v-if="transcodeStatusMap[row.id] === 'pending' || transcodeStatusMap[row.id] === 'processing'"
-                size="small"
-                type="warning"
-                style="margin-left: 4px;"
-              >
-                转码中
-              </el-tag>
-              <el-tag
-                v-else-if="transcodeStatusMap[row.id] === 'failed'"
-                size="small"
-                type="danger"
-                style="margin-left: 4px;"
-              >
-                转码失败
-              </el-tag>
+              <!-- 转码成功 -->
+              <el-tooltip v-if="transcodeStatusMap[row.id] === 'completed'" content="转码成功" placement="top">
+                <el-icon style="color: var(--el-color-success); margin-left: 5px; cursor: pointer;">
+                  <CircleCheckFilled />
+                </el-icon>
+              </el-tooltip>
+              <!-- 转码中 -->
+              <el-tooltip v-else-if="transcodeStatusMap[row.id] === 'pending' || transcodeStatusMap[row.id] === 'processing'" content="转码中" placement="top">
+                <el-icon class="is-loading" style="color: var(--el-color-warning); margin-left: 5px; cursor: pointer;">
+                  <Refresh />
+                </el-icon>
+              </el-tooltip>
+              <!-- 转码失败 -->
+              <el-tooltip v-else-if="transcodeStatusMap[row.id] === 'failed'" content="转码失败" placement="top">
+                <el-icon style="color: var(--el-color-danger); margin-left: 5px; cursor: pointer;">
+                  <CircleCloseFilled />
+                </el-icon>
+              </el-tooltip>
             </template>
           </template>
         </el-table-column>
