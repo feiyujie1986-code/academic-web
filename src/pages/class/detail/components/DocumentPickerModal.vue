@@ -58,10 +58,15 @@ function isFormatDisabled(doc: DocumentResponse) {
   return doc.type === 2 && !isExtensionAllowed(doc.name)
 }
 
+function isVideoTranscoding(doc: DocumentResponse) {
+  return doc.video?.transcodeStatus === "pending" || doc.video?.transcodeStatus === "processing"
+}
+
 function isDisabled(doc: DocumentResponse) {
   if (doc.type !== 2) return false
   if (isExcluded(doc)) return true
   if (isFormatDisabled(doc)) return true
+  if (isVideoTranscoding(doc)) return true // 转码中不可选，视频未就绪
   // 达到上限且当前项未被选中
   if (selectedCount.value >= props.limit && !isSelected(doc)) return true
   return false
@@ -271,9 +276,28 @@ function handleClose() {
           />
           <img :src="getFilePngIcon(doc.name)" class="item-file-icon" alt="">
           <span class="item-name" :title="doc.name">{{ doc.name }}</span>
+          <!-- 视频转码状态（与录播课样式一致） -->
+          <template v-if="doc.video">
+            <el-tooltip v-if="doc.video.transcodeStatus === 'completed'" content="转码成功" placement="top">
+              <el-icon class="item-transcode-icon" style="color: var(--el-color-success);">
+                <CircleCheckFilled />
+              </el-icon>
+            </el-tooltip>
+            <el-tooltip v-else-if="doc.video.transcodeStatus === 'pending' || doc.video.transcodeStatus === 'processing'" content="转码中" placement="top">
+              <el-icon class="item-transcode-icon is-loading" style="color: var(--el-color-warning);">
+                <Refresh />
+              </el-icon>
+            </el-tooltip>
+            <el-tooltip v-else-if="doc.video.transcodeStatus === 'failed'" content="转码失败" placement="top">
+              <el-icon class="item-transcode-icon" style="color: var(--el-color-danger);">
+                <CircleCloseFilled />
+              </el-icon>
+            </el-tooltip>
+          </template>
           <span class="item-size">{{ doc.file ? formatFileSize(doc.file.size) : '-' }}</span>
           <span v-if="isExcluded(doc)" class="item-tag-excluded">已添加</span>
           <span v-else-if="isFormatDisabled(doc)" class="item-tag-disabled">格式不支持</span>
+          <span v-else-if="isVideoTranscoding(doc)" class="item-tag-disabled">转码中</span>
         </template>
       </div>
     </div>
@@ -399,6 +423,12 @@ function handleClose() {
     white-space: nowrap;
     font-size: 13px;
     color: var(--el-text-color-primary);
+  }
+
+  .item-transcode-icon {
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 15px;
   }
 
   .item-size {
