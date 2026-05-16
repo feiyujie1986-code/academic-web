@@ -50,8 +50,8 @@ function resolvePath(routePath: string) {
   <template v-if="!alwaysShowRootMenu && theOnlyOneChild && !theOnlyOneChild.children">
     <Link v-if="theOnlyOneChild.meta" :to="resolvePath(theOnlyOneChild.path)">
       <el-menu-item :index="resolvePath(theOnlyOneChild.path)">
-        <SvgIcon v-if="theOnlyOneChild.meta.svgIcon" :name="theOnlyOneChild.meta.svgIcon" class="svg-icon" />
-        <component v-else-if="theOnlyOneChild.meta.elIcon" :is="theOnlyOneChild.meta.elIcon" class="el-icon" />
+        <SvgIcon v-if="theOnlyOneChild.meta.svgIcon ?? item.meta?.svgIcon" :name="(theOnlyOneChild.meta.svgIcon ?? item.meta?.svgIcon)!" class="svg-icon" />
+        <component v-else-if="theOnlyOneChild.meta.elIcon ?? item.meta?.elIcon" :is="theOnlyOneChild.meta.elIcon ?? item.meta?.elIcon" class="el-icon" />
         <template v-if="theOnlyOneChild.meta.title" #title>
           <span class="title">{{ theOnlyOneChild.meta.title }}</span>
         </template>
