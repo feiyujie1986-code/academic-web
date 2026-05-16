@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>垄断市场 — 无谓损失</title>
+<style>
+  body { font-family: "PingFang SC", "Helvetica Neue", sans-serif; background: #f8f9fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); padding: 32px; max-width: 760px; width: 100%; }
+  h2 { text-align: center; color: #1a1a2e; margin: 0 0 6px; font-size: 18px; }
+  .subtitle { text-align: center; color: #555; font-size: 13px; margin-bottom: 20px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 18px; font-size: 13px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 22px; height: 12px; border-radius: 2px; }
+  .info-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .badge { background: #f0f4ff; border: 1px solid #c7d7ff; border-radius: 8px; padding: 7px 14px; font-size: 13px; color: #3a3a6a; }
+  .badge b { color: #2563eb; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>垄断市场的无谓损失 (Deadweight Loss)</h2>
+  <p class="subtitle">需求：P = 150 − Q &nbsp;|&nbsp; TC = 100 + 10Q + Q² &nbsp;|&nbsp; 垄断厂商利润最大化</p>
+
+  <!--
+    坐标系参数:
+      Q range: 0–80,  canvas Q-axis width = 500px,  scaleX = 6.25 px/unit
+      P range: 0–160, canvas P-axis height = 400px, scaleY = 2.5  px/unit
+      Origin SVG point: (85, 440)
+      toX(q) = 85 + q * 6.25
+      toY(p) = 440 - p * 2.5
+
+    Key coords:
+      Demand D: Q=0,P=150 → (85, 65);  Q=80,P=70 → (585, 265)
+      MR:       Q=0,P=150 → (85, 65);  Q=75,P=0  → (554, 440)
+      MC:       Q=0,P=10  → (85,415);  Q=65,P=140→ (491, 90)
+
+      Monopoly   E_m: Q=35,  P=115 → (304, 152)
+      Competitive E_c: Q=46.67, P=103.33 → (377, 182)
+      MC @ Q_m:  Q=35, MC=80 → (304, 240)
+      MR=MC intersection (price on MC): (304, 240)
+
+    DWL triangle: (304,152) (377,182) (304,240)
+    CS loss rectangle+triangle above DWL: shown as light-red region
+  -->
+
+  <svg viewBox="0 0 660 510" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+    <defs>
+      <marker id="ax" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#444"/>
+      </marker>
+      <marker id="ay" markerWidth="8" markerHeight="8" refX="3" refY="6" orient="auto">
+        <path d="M0,8 L6,8 L3,0 z" fill="#444"/>
+      </marker>
+    </defs>
+
+    <!-- Grid lines -->
+    <g stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3">
+      <!-- Horizontal: P=20,40,60,80,100,103.33,115,120,140 -->
+      <line x1="85" y1="390" x2="600" y2="390"/> <!-- P=20  y=390 -->
+      <line x1="85" y1="340" x2="600" y2="340"/> <!-- P=40  y=340 -->
+      <line x1="85" y1="290" x2="600" y2="290"/> <!-- P=60  y=290 -->
+      <line x1="85" y1="240" x2="600" y2="240"/> <!-- P=80  y=240 -->
+      <line x1="85" y1="190" x2="600" y2="190"/> <!-- P=100 y=190 -->
+      <line x1="85" y1="90"  x2="600" y2="90"/>  <!-- P=140 y=90  -->
+      <!-- Vertical: Q=10,20,30,35,40,46.67,50,60,70 -->
+      <line x1="147" y1="40" x2="147" y2="440"/> <!-- Q=10 -->
+      <line x1="210" y1="40" x2="210" y2="440"/> <!-- Q=20 -->
+      <line x1="272" y1="40" x2="272" y2="440"/> <!-- Q=30 -->
+      <line x1="397" y1="40" x2="397" y2="440"/> <!-- Q=50 -->
+      <line x1="460" y1="40" x2="460" y2="440"/> <!-- Q=60 -->
+      <line x1="522" y1="40" x2="522" y2="440"/> <!-- Q=70 -->
+    </g>
+
+    <!-- ===== SHADED REGIONS ===== -->
+
+    <!-- CS loss (transferred to producer): trapezoid, P from 103.33 to 115, Q from 0 to 35 -->
+    <!-- bottom-left:(85,182) top-left:(85,152) top-right:(304,152) bottom-right:(304,182) -->
+    <!-- But this includes producer gain, not pure loss — shade lightly -->
+    <rect x="85" y="152" width="219" height="30" fill="#fca5a5" fill-opacity="0.35"/>
+
+    <!-- DWL triangle -->
+    <!-- Vertices: E_m=(304,152), E_c=(377,182), MC@Qm=(304,240) -->
+    <polygon points="304,152 377,182 304,240" fill="#fbbf24" fill-opacity="0.85" stroke="#d97706" stroke-width="2"/>
+
+    <!-- ===== CURVES ===== -->
+
+    <!-- Demand D: (85,65) to (585,265) -->
+    <line x1="85" y1="65" x2="585" y2="265" stroke="#ef4444" stroke-width="2.5"/>
+    <text x="592" y="263" fill="#ef4444" font-size="15" font-weight="bold">D</text>
+
+    <!-- MR: (85,65) to (554,440) -->
+    <line x1="85" y1="65" x2="554" y2="440" stroke="#f97316" stroke-width="2" stroke-dasharray="7,4"/>
+    <text x="556" y="438" fill="#f97316" font-size="14" font-weight="bold">MR</text>
+
+    <!-- MC: (85,415) to (491,90) -->
+    <line x1="85" y1="415" x2="491" y2="90" stroke="#3b82f6" stroke-width="2.5"/>
+    <text x="496" y="88" fill="#3b82f6" font-size="14" font-weight="bold">MC</text>
+
+    <!-- ===== REFERENCE LINES ===== -->
+
+    <!-- Q_m = 35 vertical dashed -->
+    <line x1="304" y1="152" x2="304" y2="440" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,3"/>
+
+    <!-- Q_c = 46.67 vertical dashed -->
+    <line x1="377" y1="182" x2="377" y2="440" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,3"/>
+
+    <!-- P_m = 115 horizontal dashed -->
+    <line x1="85" y1="152" x2="304" y2="152" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,3"/>
+
+    <!-- P_c = 103.33 horizontal dashed -->
+    <line x1="85" y1="182" x2="377" y2="182" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,3"/>
+
+    <!-- MC @ Q_m = 80 horizontal dashed -->
+    <line x1="85" y1="240" x2="304" y2="240" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,3"/>
+
+    <!-- ===== KEY POINTS ===== -->
+
+    <!-- E_m monopoly equilibrium on demand (304, 152) -->
+    <circle cx="304" cy="152" r="5" fill="#dc2626" stroke="white" stroke-width="2"/>
+    <text x="309" y="145" fill="#dc2626" font-size="13" font-weight="bold">E_m</text>
+
+    <!-- E_c competitive equilibrium (377, 182) -->
+    <circle cx="377" cy="182" r="5" fill="#16a34a" stroke="white" stroke-width="2"/>
+    <text x="382" y="176" fill="#16a34a" font-size="13" font-weight="bold">E_c</text>
+
+    <!-- MR=MC point (304, 240) -->
+    <circle cx="304" cy="240" r="5" fill="#f97316" stroke="white" stroke-width="2"/>
+
+    <!-- Price wedge arrow P_c to P_m on the right side of DWL -->
+    <line x1="360" y1="152" x2="360" y2="182" stroke="#7c3aed" stroke-width="1.5"/>
+    <line x1="355" y1="152" x2="365" y2="152" stroke="#7c3aed" stroke-width="1.5"/>
+    <line x1="355" y1="182" x2="365" y2="182" stroke="#7c3aed" stroke-width="1.5"/>
+    <text x="364" y="170" fill="#7c3aed" font-size="11">ΔP</text>
+
+    <!-- DWL label with arrow -->
+    <text x="430" y="220" fill="#92400e" font-size="13" font-weight="bold">DWL</text>
+    <text x="415" y="236" fill="#92400e" font-size="12">= $204.17</text>
+    <line x1="368" y1="198" x2="420" y2="218" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+    <!-- CS loss label -->
+    <text x="88" y="168" fill="#991b1b" font-size="11">消费者剩余</text>
+    <text x="88" y="181" fill="#991b1b" font-size="11">转移给厂商</text>
+
+    <!-- ===== AXES ===== -->
+    <line x1="85" y1="440" x2="615" y2="440" stroke="#444" stroke-width="2" marker-end="url(#ax)"/>
+    <line x1="85" y1="440" x2="85" y2="32" stroke="#444" stroke-width="2" marker-end="url(#ay)"/>
+
+    <!-- Axis labels -->
+    <text x="618" y="447" fill="#444" font-size="14" font-weight="600">Q</text>
+    <text x="70" y="28"  fill="#444" font-size="14" font-weight="600">P</text>
+
+    <!-- ===== TICK LABELS ===== -->
+    <!-- Y axis -->
+    <text x="78" y="156" fill="#374151" font-size="12" text-anchor="end">115</text>
+    <text x="78" y="186" fill="#374151" font-size="12" text-anchor="end">103</text>
+    <text x="78" y="244" fill="#374151" font-size="12" text-anchor="end">80</text>
+    <text x="78" y="69"  fill="#374151" font-size="12" text-anchor="end">150</text>
+    <text x="78" y="419" fill="#374151" font-size="12" text-anchor="end">10</text>
+
+    <!-- X axis -->
+    <text x="304" y="456" fill="#374151" font-size="12" text-anchor="middle">35</text>
+    <text x="377" y="456" fill="#374151" font-size="12" text-anchor="middle">46⅔</text>
+    <text x="554" y="456" fill="#374151" font-size="12" text-anchor="middle">75</text>
+
+    <!-- P label annotations -->
+    <text x="20" y="156" fill="#dc2626" font-size="11" text-anchor="middle">P_m</text>
+    <text x="20" y="186" fill="#16a34a" font-size="11" text-anchor="middle">P_c</text>
+    <text x="20" y="244" fill="#3b82f6" font-size="11" text-anchor="middle">MC_m</text>
+
+    <!-- Q label annotations -->
+    <text x="304" y="472" fill="#dc2626" font-size="11" text-anchor="middle">Q_m</text>
+    <text x="377" y="472" fill="#16a34a" font-size="11" text-anchor="middle">Q_c</text>
+
+    <!-- DWL formula box -->
+    <rect x="445" y="260" width="175" height="80" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+    <text x="455" y="280" fill="#78350f" font-size="12" font-weight="bold">无谓损失计算：</text>
+    <text x="455" y="298" fill="#78350f" font-size="12">½ × (115−80) × (46⅔−35)</text>
+    <text x="455" y="316" fill="#78350f" font-size="12">= ½ × 35 × 35/3</text>
+    <text x="455" y="334" fill="#b45309" font-size="13" font-weight="bold">= 1225/6 ≈ $204.17</text>
+
+  </svg>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#ef4444"></div> 需求曲线 D</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#f97316;opacity:0.7"></div> 边际收益 MR（虚线）</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> 边际成本 MC</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#fbbf24"></div> 无谓损失 DWL（黄色三角）</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#fca5a5"></div> 消费者剩余转移（红色区域）</div>
+  </div>
+
+  <div class="info-row">
+    <div class="badge">垄断均衡：Q_m = 35，P_m = <b>$115</b></div>
+    <div class="badge">完全竞争：Q_c = 46⅔，P_c ≈ <b>$103.33</b></div>
+    <div class="badge">垄断利润：<b>$2350</b></div>
+    <div class="badge">无谓损失：<b>≈ $204.17</b></div>
+  </div>
+</div>
+</body>
+</html>

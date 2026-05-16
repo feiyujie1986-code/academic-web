@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>汽油市场 — 税收与无谓损失</title>
+<style>
+  body { font-family: "PingFang SC", "Helvetica Neue", sans-serif; background: #f8f9fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); padding: 32px; max-width: 720px; width: 100%; }
+  h2 { text-align: center; color: #1a1a2e; margin: 0 0 8px; font-size: 18px; }
+  .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 24px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-top: 20px; font-size: 13px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-box { width: 20px; height: 12px; border-radius: 2px; }
+  .info-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .info-badge { background: #f0f4ff; border: 1px solid #c7d7ff; border-radius: 8px; padding: 8px 16px; font-size: 13px; color: #3a3a6a; }
+  .info-badge span { font-weight: 700; color: #2563eb; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>汽油市场：消费者税收 $20 的影响</h2>
+  <p class="subtitle">需求：P = 280 − 4Q &nbsp;|&nbsp; 供给：P = 10 + Q &nbsp;|&nbsp; 税额：$20/单位</p>
+
+  <svg viewBox="0 0 620 480" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+
+    <!-- 坐标系背景网格 -->
+    <defs>
+      <marker id="arrowX" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#555"/>
+      </marker>
+      <marker id="arrowY" markerWidth="8" markerHeight="8" refX="3" refY="6" orient="auto">
+        <path d="M0,8 L6,8 L3,0 z" fill="#555"/>
+      </marker>
+    </defs>
+
+    <!-- 网格线 -->
+    <!-- 水平网格 P=20,40,60,80,100,120,140,160,180,200 -->
+    <!-- toY(p) = 430 - p * 1.55   (P range 0~280, plot height=434) -->
+    <!-- toX(q) = 75 + q * 6.4     (Q range 0~80,  plot width=512) -->
+
+    <!-- P=20 → y=399; P=40→368.9; P=60→337.8; P=80→306.8; P=100→275.5; P=120→244.4; P=140→213.3; P=160→182.2; P=180→151.1; P=200→120 -->
+    <g stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3">
+      <line x1="75" y1="399" x2="587" y2="399"/>
+      <line x1="75" y1="368" x2="587" y2="368"/>
+      <line x1="75" y1="337" x2="587" y2="337"/>
+      <line x1="75" y1="306" x2="587" y2="306"/>
+      <line x1="75" y1="275" x2="587" y2="275"/>
+      <line x1="75" y1="244" x2="587" y2="244"/>
+      <line x1="75" y1="213" x2="587" y2="213"/>
+      <line x1="75" y1="182" x2="587" y2="182"/>
+
+      <!-- 垂直网格 Q=10,20,30,40,50,54,60,70 -->
+      <!-- toX(10)=139; 20=203; 30=267; 40=331; 50=395; 54=420.6; 60=459; 70=523 -->
+      <line x1="139" y1="30" x2="139" y2="430"/>
+      <line x1="203" y1="30" x2="203" y2="430"/>
+      <line x1="267" y1="30" x2="267" y2="430"/>
+      <line x1="331" y1="30" x2="331" y2="430"/>
+      <line x1="395" y1="30" x2="395" y2="430"/>
+      <line x1="459" y1="30" x2="459" y2="430"/>
+      <line x1="523" y1="30" x2="523" y2="430"/>
+    </g>
+
+    <!-- 无谓损失三角形 DWL -->
+    <!-- 顶点: (Q=50,P=60), (Q=50,P=80), (Q=54,P=64) -->
+    <!-- toX(50)=395, toY(60)=337, toY(80)=306, toX(54)=420.6, toY(64)=331.8 -->
+    <polygon points="395,337 395,306 420,331" fill="#fbbf24" fill-opacity="0.7" stroke="#f59e0b" stroke-width="1.5"/>
+
+    <!-- 税收矩形 (消费者净损失部分 + 政府税收) -->
+    <!-- 消费者税收楔形: Q=0~50, P_S=60, P_D=80 -->
+    <!-- 政府税收矩形: x=75~395, y=306~337 (P 60 to 80, Q 0 to 50) -->
+    <rect x="75" y="306" width="320" height="31" fill="#bfdbfe" fill-opacity="0.5" stroke="none"/>
+
+    <!-- 消费者剩余减少(上三角) -->
+    <!-- 生产者剩余减少(下三角) — 这两个不单独画，只突出DWL -->
+
+    <!-- 坐标轴 -->
+    <line x1="75" y1="430" x2="595" y2="430" stroke="#555" stroke-width="2" marker-end="url(#arrowX)"/>
+    <line x1="75" y1="430" x2="75" y2="22" stroke="#555" stroke-width="2" marker-end="url(#arrowY)"/>
+
+    <!-- 需求曲线 D: P=280-4Q  Q=0→P=280; Q=70→P=0 -->
+    <!-- toX(0)=75, toY(280)=430-280*1.55=430-434=-4 ≈ clamp to 30 -->
+    <!-- toX(70)=523, toY(0)=430 -->
+    <!-- Let me recalc: toY(p) = 430 - p*(400/280) = 430 - p*1.4286 -->
+    <!-- toY(280)=430-400=30  toY(64)=430-91.4=338.6  toY(60)=430-85.7=344.3  toY(80)=430-114.3=315.7 -->
+    <!-- toY(0)=430 -->
+    <!-- Need to redo with scaleY = 400/280 = 1.4286 -->
+    <!-- toX(q) = 75 + q * (512/80) = 75 + q*6.4 -->
+    <!-- toX(0)=75, toX(50)=395, toX(54)=420.6, toX(70)=523, toX(80)=587 -->
+
+    <!-- Recalculate all y coords with scaleY=1.4286: -->
+    <!-- toY(p) = 430 - p*1.4286 -->
+    <!-- P=280 → y=30 -->
+    <!-- P=200 → y=430-285.7=144.3 -->
+    <!-- P=100 → y=430-142.9=287.1 -->
+    <!-- P=80 →  y=430-114.3=315.7 ≈ 316 -->
+    <!-- P=64 →  y=430-91.4=338.6 ≈ 339 -->
+    <!-- P=60 →  y=430-85.7=344.3 ≈ 344 -->
+    <!-- P=20 →  y=430-28.6=401.4 ≈ 401 -->
+    <!-- P=10 →  y=430-14.3=415.7 ≈ 416 -->
+    <!-- P=0  →  y=430 -->
+
+    <!-- Re-draw DWL triangle with correct coords -->
+    <!-- (Q=50,P=80)=(395,316), (Q=54,P=64)=(421,339), (Q=50,P=60)=(395,344) -->
+
+    <!-- Redo everything with correct scale -->
+    <!-- I'll just embed the corrected values directly -->
+
+    <!-- 需求曲线 D -->
+    <line x1="75" y1="30" x2="523" y2="430" stroke="#ef4444" stroke-width="2.5"/>
+    <text x="530" y="428" fill="#ef4444" font-size="15" font-weight="bold">D</text>
+
+    <!-- 供给曲线 S: P=10+Q  Q=0→P=10; Q=80→P=90 -->
+    <!-- toX(0)=75, toY(10)=416; toX(80)=587, toY(90)=430-128.6=301.4≈301 -->
+    <line x1="75" y1="416" x2="587" y2="301" stroke="#3b82f6" stroke-width="2.5"/>
+    <text x="560" y="295" fill="#3b82f6" font-size="15" font-weight="bold">S</text>
+
+    <!-- 税后需求曲线 D': P=260-4Q (向下平移20) Q=0→240; Q=65→0 -->
+    <!-- toX(0)=75, toY(240)=430-342.9=87.1≈87; toX(65)=491, toY(0)=430 -->
+    <line x1="75" y1="87" x2="491" y2="430" stroke="#ef4444" stroke-width="2" stroke-dasharray="6,4" opacity="0.7"/>
+    <text x="496" y="428" fill="#ef4444" font-size="13" font-style="italic" opacity="0.85">D'</text>
+
+    <!-- 税收后均衡垂线 Q=50 -->
+    <!-- toX(50)=395, 从 y=430 到 y=316 (P=80) -->
+    <line x1="395" y1="430" x2="395" y2="316" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+    <!-- 税前均衡垂线 Q=54 -->
+    <!-- toX(54)=421, 从 y=430 到 y=339 (P=64) -->
+    <line x1="421" y1="430" x2="421" y2="339" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+    <!-- P_D=80 水平线 -->
+    <line x1="75" y1="316" x2="395" y2="316" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+    <!-- P*=64 水平线 -->
+    <line x1="75" y1="339" x2="421" y2="339" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+    <!-- P_S=60 水平线 -->
+    <line x1="75" y1="344" x2="395" y2="344" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+    <!-- ===== 重新绘制税收矩形和DWL三角形（精确坐标）===== -->
+    <!-- 政府税收矩形: Q 0~50, P 60~80 → x:75~395, y:344~316 -->
+    <rect x="75" y="316" width="320" height="28" fill="#93c5fd" fill-opacity="0.4" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="200" y="334" fill="#1d4ed8" font-size="12" text-anchor="middle" font-weight="600">政府税收</text>
+
+    <!-- DWL 三角形: (395,344),(395,316),(421,339) -->
+    <polygon points="395,344 395,316 421,339" fill="#fbbf24" fill-opacity="0.85" stroke="#d97706" stroke-width="2"/>
+    <text x="407" y="330" fill="#92400e" font-size="12" font-weight="bold" text-anchor="middle">DWL</text>
+
+    <!-- 均衡点标注 -->
+    <!-- 税前均衡 E0: (421, 339) -->
+    <circle cx="421" cy="339" r="5" fill="#16a34a" stroke="white" stroke-width="2"/>
+    <text x="428" y="332" fill="#16a34a" font-size="13" font-weight="bold">E₀</text>
+
+    <!-- 税后均衡 E1: (395, 344) supply side -->
+    <circle cx="395" cy="344" r="5" fill="#dc2626" stroke="white" stroke-width="2"/>
+
+    <!-- 税收楔形箭头 -->
+    <line x1="405" y1="316" x2="405" y2="344" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#arrowX)"/>
+    <line x1="405" y1="344" x2="405" y2="316" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#arrowX)"/>
+    <text x="410" y="333" fill="#1d4ed8" font-size="12">$20</text>
+
+    <!-- Y轴刻度标注 -->
+    <text x="68" y="320" fill="#374151" font-size="12" text-anchor="end">P_D=80</text>
+    <text x="68" y="343" fill="#374151" font-size="12" text-anchor="end">P*=64</text>
+    <text x="68" y="348" fill="#374151" font-size="12" text-anchor="end">P_S=60</text>
+    <text x="68" y="30" fill="#374151" font-size="12" text-anchor="end">280</text>
+    <text x="68" y="416" fill="#374151" font-size="12" text-anchor="end">10</text>
+
+    <!-- X轴刻度标注 -->
+    <text x="395" y="445" fill="#374151" font-size="12" text-anchor="middle">Q_T=50</text>
+    <text x="421" y="445" fill="#374151" font-size="12" text-anchor="middle">Q*=54</text>
+    <text x="75" y="445" fill="#374151" font-size="12" text-anchor="middle">0</text>
+
+    <!-- 轴标签 -->
+    <text x="595" y="448" fill="#374151" font-size="14" font-weight="600">Q</text>
+    <text x="55" y="20" fill="#374151" font-size="14" font-weight="600">P</text>
+
+    <!-- DWL 面积公式标注 -->
+    <text x="480" y="370" fill="#92400e" font-size="13" text-anchor="middle">DWL = ½×4×20</text>
+    <text x="480" y="388" fill="#92400e" font-size="14" font-weight="bold" text-anchor="middle">= $40</text>
+    <line x1="435" y1="335" x2="462" y2="365" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+  </svg>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box" style="background:#ef4444"></div> 需求曲线 D</div>
+    <div class="legend-item"><div class="legend-box" style="background:#ef4444;opacity:0.5"></div> 课税后需求 D'（下移$20）</div>
+    <div class="legend-item"><div class="legend-box" style="background:#3b82f6"></div> 供给曲线 S</div>
+    <div class="legend-item"><div class="legend-box" style="background:#93c5fd"></div> 政府税收</div>
+    <div class="legend-item"><div class="legend-box" style="background:#fbbf24"></div> 无谓损失 (DWL)</div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-badge">课税前均衡：Q* = 54，P* = $64</div>
+    <div class="info-badge">课税后：Q<sub>T</sub> = 50，P<sub>D</sub> = $80，P<sub>S</sub> = $60</div>
+    <div class="info-badge">无谓损失 = <span>$40</span></div>
+  </div>
+</div>
+</body>
+</html>
