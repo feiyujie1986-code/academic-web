@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type { NoteComment, NoteListItem } from "@/api/note/note"
+import type { MemberSearchItem } from "@/api/member/memberSearch"
+import { searchMembersApi } from "@/api/member/memberSearch"
 import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
 import {
@@ -36,7 +38,34 @@ function resetSearch() {
   searchFormData.title = ""
   searchFormData.userId = undefined
   searchFormData.status = undefined
+  memberSearchOptions.value = []
   handleSearch()
+}
+
+// ========== 发布人昵称搜索 ==========
+const memberSearchOptions = ref<MemberSearchItem[]>([])
+const memberSearchLoading = ref(false)
+let memberSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+function handleMemberSearch(query: string) {
+  if (memberSearchTimer) clearTimeout(memberSearchTimer)
+  if (!query) {
+    memberSearchOptions.value = []
+    return
+  }
+  memberSearchTimer = setTimeout(async () => {
+    memberSearchLoading.value = true
+    try {
+      const res = await searchMembersApi({ nickname: query, page: 1, pageSize: 20 })
+      if (res.code === 0) {
+        memberSearchOptions.value = res.data.list
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      memberSearchLoading.value = false
+    }
+  }, 300)
 }
 
 // ========== 表格数据 ==========
@@ -289,14 +318,24 @@ async function handleDeleteComment(comment: NoteComment) {
             @keyup.enter="handleSearch"
           />
         </el-form-item>
-        <el-form-item label="发布人ID">
-          <el-input
-            v-model.number="searchFormData.userId"
-            placeholder="请输入用户ID"
+        <el-form-item label="发布人">
+          <el-select
+            v-model="searchFormData.userId"
+            filterable
+            remote
             clearable
-            style="width: 150px"
-            @keyup.enter="handleSearch"
-          />
+            :remote-method="handleMemberSearch"
+            :loading="memberSearchLoading"
+            placeholder="昵称模糊搜索"
+            style="width: 200px"
+          >
+            <el-option
+              v-for="item in memberSearchOptions"
+              :key="item.id"
+              :label="item.nickname"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="状态">
           <el-select
@@ -521,7 +560,11 @@ async function handleDeleteComment(comment: NoteComment) {
               >
                 <template v-if="media.type === 1">
                   <div class="media-thumb-wrap">
-                    <el-image :src="media.url" fit="cover" class="media-thumb" />
+                    <el-image :src="media.url" fit="cover" class="media-thumb">
+                      <template #placeholder>
+                        <div class="media-thumb image-loading" />
+                      </template>
+                    </el-image>
                     <span v-if="media.url === drawerNote.coverUrl" class="cover-badge">封面</span>
                   </div>
                   <div v-if="media.width && media.height" class="media-meta">
@@ -530,7 +573,11 @@ async function handleDeleteComment(comment: NoteComment) {
                 </template>
                 <template v-else>
                   <div class="video-thumb">
-                    <el-image v-if="media.url" :src="media.url" fit="cover" class="media-thumb" />
+                    <el-image v-if="media.url" :src="media.url" fit="cover" class="media-thumb">
+                      <template #placeholder>
+                        <div class="media-thumb image-loading" />
+                      </template>
+                    </el-image>
                     <div v-else class="media-thumb video-placeholder" />
                     <div class="play-icon">
                       ▶
@@ -775,6 +822,12 @@ async function handleDeleteComment(comment: NoteComment) {
     object-fit: cover;
   }
 
+  .image-loading {
+    background: linear-gradient(90deg, var(--el-fill-color) 25%, var(--el-fill-color-light) 50%, var(--el-fill-color) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
   .cover-badge {
     position: absolute;
     top: 4px;
@@ -906,5 +959,10 @@ async function handleDeleteComment(comment: NoteComment) {
   background: #000;
   border-radius: 4px;
   overflow: hidden;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 </style>
