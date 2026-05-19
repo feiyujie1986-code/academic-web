@@ -30,6 +30,7 @@ export interface VisibilityDetailClass {
 export interface VisibilityDetailMember {
   id: number
   nickname: string
+  account: string
   avatar: string
 }
 

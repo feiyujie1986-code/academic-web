@@ -525,27 +525,33 @@ async function handleDeleteComment(comment: NoteComment) {
             <el-descriptions-item label="可见性" :span="2">
               <div class="visibility-detail">
                 <span class="visibility-label">{{ VisibilityMap[drawerNote.visibility] || drawerNote.visibility }}</span>
+
+                <!-- 指定群：tag 展示群名 -->
                 <template v-if="drawerNote.visibility === 4 && drawerNote.visibilityDetail?.classes?.length">
-                  <el-tag
-                    v-for="cls in drawerNote.visibilityDetail.classes"
-                    :key="cls.id"
-                    size="small"
-                    type="info"
-                    class="detail-tag"
-                  >
-                    {{ cls.name }}
-                  </el-tag>
+                  <div class="detail-class-list">
+                    <el-tag
+                      v-for="cls in drawerNote.visibilityDetail.classes"
+                      :key="cls.id"
+                      size="small"
+                      type="info"
+                    >
+                      {{ cls.name }}
+                    </el-tag>
+                  </div>
                 </template>
+
+                <!-- 指定成员：列表展示昵称 + 账号 -->
                 <template v-else-if="drawerNote.visibility === 6 && drawerNote.visibilityDetail?.members?.length">
-                  <el-tag
-                    v-for="member in drawerNote.visibilityDetail.members"
-                    :key="member.id"
-                    size="small"
-                    type="info"
-                    class="detail-tag"
-                  >
-                    {{ member.nickname }}
-                  </el-tag>
+                  <div class="detail-member-list">
+                    <div
+                      v-for="member in drawerNote.visibilityDetail.members"
+                      :key="member.id"
+                      class="detail-member-item"
+                    >
+                      <span class="member-nickname">{{ member.nickname }}</span>
+                      <span class="member-account">{{ member.account }}</span>
+                    </div>
+                  </div>
                 </template>
               </div>
             </el-descriptions-item>
@@ -800,18 +806,44 @@ async function handleDeleteComment(comment: NoteComment) {
 
 .visibility-detail {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
 
   .visibility-label {
     font-size: 13px;
+    font-weight: 500;
     color: var(--el-text-color-primary);
-    flex-shrink: 0;
   }
 
-  .detail-tag {
-    flex-shrink: 0;
+  .detail-class-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .detail-member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-member-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px;
+    background: var(--el-fill-color-lighter);
+    border-radius: 4px;
+    font-size: 13px;
+
+    .member-nickname {
+      color: var(--el-text-color-primary);
+      font-weight: 500;
+    }
+
+    .member-account {
+      color: var(--el-text-color-secondary);
+    }
   }
 }
 
