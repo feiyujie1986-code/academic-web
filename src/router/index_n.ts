@@ -226,6 +226,14 @@ export const constantRoutes: RouteRecordRaw[] = [
           parent: "CommunityList",
           breadcrumb: false
         }
+      },
+      {
+        path: "note/list",
+        component: () => import("@/pages/note/list/index.vue"),
+        name: "NoteList",
+        meta: {
+          title: "笔记管理"
+        }
       }
     ]
   },
