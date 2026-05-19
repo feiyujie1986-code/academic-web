@@ -5,7 +5,9 @@ export const VisibilityMap: Record<number, string> = {
   1: "公开",
   2: "仅自己",
   3: "指定可见",
-  4: "指定不可见",
+  4: "指定群",
+  5: "指定不可见",
+  6: "指定成员",
 }
 
 // 笔记状态
@@ -18,6 +20,22 @@ export const NoteStatusMap: Record<number, string> = {
 export const MediaTypeMap: Record<number, string> = {
   1: "图片",
   2: "视频",
+}
+
+export interface VisibilityDetailClass {
+  id: number
+  name: string
+}
+
+export interface VisibilityDetailMember {
+  id: number
+  nickname: string
+  avatar: string
+}
+
+export interface VisibilityDetail {
+  classes?: VisibilityDetailClass[]
+  members?: VisibilityDetailMember[]
 }
 
 export interface NoteMedia {
@@ -34,9 +52,11 @@ export interface NoteMedia {
 export interface NoteListItem extends BaseModel {
   userId: number
   userNickname?: string
+  userAvatar?: string
   title: string
   content?: string
   visibility: number
+  visibilityDetail?: VisibilityDetail | null
   status: number
   coverUrl?: string
   likeCount: number

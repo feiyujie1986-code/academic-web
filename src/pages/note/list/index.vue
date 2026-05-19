@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { NoteComment, NoteListItem } from "@/api/note/note"
+import type { NoteComment, NoteListItem, VisibilityDetail } from "@/api/note/note"
 import type { MemberSearchItem } from "@/api/member/memberSearch"
 import { searchMembersApi } from "@/api/member/memberSearch"
 import { usePagination } from "@@/composables/usePagination_n"
@@ -104,6 +104,18 @@ function handleSizeChange(value: number) {
 function handleCurrentChange(value: number) {
   changeCurrentPage(value)
   getTableData()
+}
+
+// ========== 可见性展示 ==========
+function getVisibilityLabel(visibility: number, detail?: VisibilityDetail | null): string {
+  const label = VisibilityMap[visibility] || String(visibility)
+  if (visibility === 4 && detail?.classes?.length) {
+    return `${label}（${detail.classes.map(c => c.name).join("、")}）`
+  }
+  if (visibility === 6 && detail?.members?.length) {
+    return `${label}（${detail.members.map(m => m.nickname).join("、")}）`
+  }
+  return label
 }
 
 // ========== 媒体统计 ==========
@@ -391,9 +403,17 @@ async function handleDeleteComment(comment: NoteComment) {
           </el-table-column>
 
           <!-- 可见性 -->
-          <el-table-column label="可见性" width="100">
+          <el-table-column label="可见性" min-width="120">
             <template #default="{ row }">
-              {{ VisibilityMap[row.visibility] || row.visibility }}
+              <el-tooltip
+                v-if="(row.visibility === 4 && row.visibilityDetail?.classes?.length) || (row.visibility === 6 && row.visibilityDetail?.members?.length)"
+                :content="getVisibilityLabel(row.visibility, row.visibilityDetail)"
+                placement="top"
+                :show-after="300"
+              >
+                <span class="visibility-text">{{ getVisibilityLabel(row.visibility, row.visibilityDetail) }}</span>
+              </el-tooltip>
+              <span v-else>{{ VisibilityMap[row.visibility] || row.visibility }}</span>
             </template>
           </el-table-column>
 
@@ -497,13 +517,37 @@ async function handleDeleteComment(comment: NoteComment) {
               {{ drawerNote.title }}
             </el-descriptions-item>
             <el-descriptions-item label="发布人">
-              UserID {{ drawerNote.userId }}
+              {{ drawerNote.userNickname || `UserID ${drawerNote.userId}` }}
             </el-descriptions-item>
             <el-descriptions-item label="发布时间">
               {{ formatDateTime(drawerNote.createdAt * 1000) }}
             </el-descriptions-item>
-            <el-descriptions-item label="可见性">
-              {{ VisibilityMap[drawerNote.visibility] || drawerNote.visibility }}
+            <el-descriptions-item label="可见性" :span="2">
+              <div class="visibility-detail">
+                <span class="visibility-label">{{ VisibilityMap[drawerNote.visibility] || drawerNote.visibility }}</span>
+                <template v-if="drawerNote.visibility === 4 && drawerNote.visibilityDetail?.classes?.length">
+                  <el-tag
+                    v-for="cls in drawerNote.visibilityDetail.classes"
+                    :key="cls.id"
+                    size="small"
+                    type="info"
+                    class="detail-tag"
+                  >
+                    {{ cls.name }}
+                  </el-tag>
+                </template>
+                <template v-else-if="drawerNote.visibility === 6 && drawerNote.visibilityDetail?.members?.length">
+                  <el-tag
+                    v-for="member in drawerNote.visibilityDetail.members"
+                    :key="member.id"
+                    size="small"
+                    type="info"
+                    class="detail-tag"
+                  >
+                    {{ member.nickname }}
+                  </el-tag>
+                </template>
+              </div>
             </el-descriptions-item>
             <el-descriptions-item label="状态">
               <div class="status-cell">
@@ -744,6 +788,31 @@ async function handleDeleteComment(comment: NoteComment) {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: default;
+}
+
+.visibility-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.visibility-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+
+  .visibility-label {
+    font-size: 13px;
+    color: var(--el-text-color-primary);
+    flex-shrink: 0;
+  }
+
+  .detail-tag {
+    flex-shrink: 0;
+  }
 }
 
 .interaction-cell {
