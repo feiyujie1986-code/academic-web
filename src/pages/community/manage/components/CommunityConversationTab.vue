@@ -100,7 +100,7 @@ const editingConversationId = ref<number | null>(null)
 const dialogForm = reactive({
   name: "",
   description: "",
-  isGroup: true
+  isGroup: false
 })
 
 // 选择群成员相关
@@ -117,7 +117,7 @@ function openCreateDialog() {
   editingConversationId.value = null
   dialogForm.name = ""
   dialogForm.description = ""
-  dialogForm.isGroup = true
+  dialogForm.isGroup = false
   searchKeyword.value = ""
   selectedMembers.value = []
   originalMembers.value = []
@@ -131,7 +131,7 @@ async function openEditDialog(conversation: ConversationModel) {
   editingConversationId.value = conversation.id
   dialogForm.name = conversation.name
   dialogForm.description = conversation.announcement || ""
-  dialogForm.isGroup = conversation.isGroup ?? true
+  dialogForm.isGroup = conversation.isGroup ?? false
   searchKeyword.value = ""
   originalMembers.value = []
   selectedMembers.value = []

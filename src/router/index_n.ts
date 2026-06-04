@@ -227,8 +227,16 @@ export const constantRoutes: RouteRecordRaw[] = [
           breadcrumb: false
         }
       },
+    ]
+  },
+  {
+    path: "/community/note",
+    component: Layouts,
+    meta: { hidden: true },
+    redirect: "/community/note/list",
+    children: [
       {
-        path: "note/list",
+        path: "list",
         component: () => import("@/pages/note/list/index.vue"),
         name: "NoteList",
         meta: {

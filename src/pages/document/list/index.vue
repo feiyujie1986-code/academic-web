@@ -50,8 +50,8 @@ const categoryByExtension: Record<string, string[]> = {
 }
 
 // 支持上传的文件格式
-const SUPPORTED_EXTENSIONS = ["xlsx", "xls", "csv", "txt", "mp3", "docx", "doc", "mp4", "mov", "pdf", "jpg", "png", "jpeg", "ppt", "pptx", "epub", "mobi", "rtf"]
-const SUPPORTED_ACCEPT = ".xlsx,.xls,.csv,.txt,.mp3,.docx,.doc,.mp4,.mov,.pdf,.jpg,.png,.jpeg,.ppt,.pptx,.epub,.mobi,.rtf"
+const SUPPORTED_EXTENSIONS = ["xlsx", "xls", "csv", "txt", "mp3", "docx", "doc", "mp4", "mov", "pdf", "jpg", "png", "jpeg", "ppt", "pptx", "epub", "mobi", "azw", "azw3", "rtf"]
+const SUPPORTED_ACCEPT = ".xlsx,.xls,.csv,.txt,.mp3,.docx,.doc,.mp4,.mov,.pdf,.jpg,.png,.jpeg,.ppt,.pptx,.epub,.mobi,.azw,.azw3,.rtf"
 
 // 检查文件格式是否支持
 function isFileSupported(filename: string): boolean {
@@ -1996,7 +1996,7 @@ onUnmounted(() => {
             </div>
             <div class="upload-format-row">
               <span class="upload-format-label">电子书：</span>
-              <span>epub、mobi</span>
+              <span>epub、mobi、azw、azw3（mobi、azw、azw3 自动转成 epub）</span>
             </div>
           </div>
         </template>
