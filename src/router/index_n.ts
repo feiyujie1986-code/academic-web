@@ -226,7 +226,7 @@ export const constantRoutes: RouteRecordRaw[] = [
           parent: "CommunityList",
           breadcrumb: false
         }
-      },
+      }
     ]
   },
   {
@@ -241,6 +241,22 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: "NoteList",
         meta: {
           title: "笔记管理"
+        }
+      }
+    ]
+  },
+  {
+    path: "/banner",
+    component: Layouts,
+    meta: { hidden: true },
+    redirect: "/banner/list",
+    children: [
+      {
+        path: "list",
+        component: () => import("@/pages/banner/list/index.vue"),
+        name: "BannerList",
+        meta: {
+          title: "Banner 管理"
         }
       }
     ]

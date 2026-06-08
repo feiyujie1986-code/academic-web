@@ -71,6 +71,9 @@ importers:
       vue-router:
         specifier: 4.5.1
         version: 4.5.1(vue@3.5.17(typescript@5.8.3))
+      vuedraggable:
+        specifier: 4.1.0
+        version: 4.1.0(vue@3.5.17(typescript@5.8.3))
       vxe-table:
         specifier: 4.6.25
         version: 4.6.25(vue@3.5.17(typescript@5.8.3))
@@ -2860,6 +2863,9 @@ packages:
     resolution: {integrity: sha512-iOBWFgUX7caIZiuutICxVgX1SdxwAVFFKwt1EvMYYec/NWO5meOJ6K5uQxhrYBdQJne4KxiqZc+KptFOWFSI9w==}
     engines: {node: '>=18'}
 
+  sortablejs@1.14.0:
+    resolution: {integrity: sha512-pBXvQCs5/33fdN1/39pPL0NZF20LeRbLQ5jtnheIPN9JQAaufGjKdWduZn4U7wCtVuzKhmRkI0DFYHYRbB2H1w==}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -3217,6 +3223,11 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  vuedraggable@4.1.0:
+    resolution: {integrity: sha512-FU5HCWBmsf20GpP3eudURW3WdWTKIbEIQxh9/8GE806hydR9qZqRRxRE3RjqX7PkuLuMQG/A7n3cfj9rCEchww==}
+    peerDependencies:
+      vue: ^3.0.1
 
   vxe-table@4.6.25:
     resolution: {integrity: sha512-rFhGh8w+420cdnIasQKisiKagz9F/iNieB/z6v0j4GcsMfGHEmSJ72YrHcXogQh4wNlCzKVfb7rl7nREL5eIOg==}
@@ -6226,6 +6237,8 @@ snapshots:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
 
+  sortablejs@1.14.0: {}
+
   source-map-js@1.2.1: {}
 
   source-map@0.6.1: {}
@@ -6615,6 +6628,11 @@ snapshots:
       '@vue/shared': 3.5.17
     optionalDependencies:
       typescript: 5.8.3
+
+  vuedraggable@4.1.0(vue@3.5.17(typescript@5.8.3)):
+    dependencies:
+      sortablejs: 1.14.0
+      vue: 3.5.17(typescript@5.8.3)
 
   vxe-table@4.6.25(vue@3.5.17(typescript@5.8.3)):
     dependencies:
