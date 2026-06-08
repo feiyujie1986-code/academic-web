@@ -262,7 +262,7 @@ async function handleSubmit() {
             </el-button>
           </el-upload>
           <div class="upload-tip">
-            建议尺寸与 App 首页轮播卡片比例一致，支持 jpg/png/webp，大小不超过 5MB
+            建议尺寸 1242×699px（比例 16:9），支持 jpg/png/webp，大小建议控制在 200-500KB 以内（不超过 5MB）
           </div>
         </div>
       </el-form-item>
