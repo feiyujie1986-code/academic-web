@@ -310,8 +310,8 @@ async function handleSubmit(publishAfterSave = false) {
       categoryId: formData.value.categoryId!,
       coverImage: formData.value.coverImage,
       location: formData.value.location || undefined,
-      startTime: formData.value.startTime!,
-      endTime: formData.value.endTime || undefined,
+      startTime: Number(formData.value.startTime!),
+      endTime: formData.value.endTime ? Number(formData.value.endTime) : undefined,
       description: formData.value.description || undefined,
       maxParticipants: formData.value.maxParticipants,
       sortOrder: formData.value.sortOrder
