@@ -59,8 +59,6 @@ const linkTargetMeta = computed(() => {
   switch (formData.value.linkType) {
     case BannerLinkType.Activity:
       return { label: "活动 ID", placeholder: "请输入活动 ID", isUrl: false }
-    case BannerLinkType.Course:
-      return { label: "课程 ID", placeholder: "请输入课程 ID", isUrl: false }
     case BannerLinkType.Note:
       return { label: "笔记 ID", placeholder: "请输入笔记 ID", isUrl: false }
     case BannerLinkType.Community:

@@ -16,7 +16,6 @@ export enum BannerLinkType {
 export const linkTypeLabelMap: Record<number, string> = {
   [BannerLinkType.None]: "不跳转",
   [BannerLinkType.Activity]: "活动",
-  [BannerLinkType.Course]: "课程",
   [BannerLinkType.Note]: "笔记",
   [BannerLinkType.Community]: "社群",
   [BannerLinkType.Url]: "外部链接"
