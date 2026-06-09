@@ -7,19 +7,19 @@ export const VisibilityMap: Record<number, string> = {
   3: "指定可见",
   4: "指定群",
   5: "指定不可见",
-  6: "指定成员",
+  6: "指定成员"
 }
 
 // 笔记状态
 export const NoteStatusMap: Record<number, string> = {
   1: "正常",
-  2: "已屏蔽",
+  2: "已屏蔽"
 }
 
 // 媒体类型
 export const MediaTypeMap: Record<number, string> = {
   1: "图片",
-  2: "视频",
+  2: "视频"
 }
 
 export interface VisibilityDetailClass {

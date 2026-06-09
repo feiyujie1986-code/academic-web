@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import type { NoteComment, NoteListItem, VisibilityDetail } from "@/api/note/note"
 import type { MemberSearchItem } from "@/api/member/memberSearch"
-import { searchMembersApi } from "@/api/member/memberSearch"
+import type { NoteComment, NoteListItem, VisibilityDetail } from "@/api/note/note"
 import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
+import { searchMembersApi } from "@/api/member/memberSearch"
 import {
   deleteNoteApi,
   deleteNoteCommentApi,
@@ -793,7 +793,6 @@ async function handleDeleteComment(comment: NoteComment) {
   justify-content: flex-end;
 }
 
-
 .title-text {
   display: block;
   overflow: hidden;
@@ -930,7 +929,12 @@ async function handleDeleteComment(comment: NoteComment) {
   }
 
   .image-loading {
-    background: linear-gradient(90deg, var(--el-fill-color) 25%, var(--el-fill-color-light) 50%, var(--el-fill-color) 75%);
+    background: linear-gradient(
+      90deg,
+      var(--el-fill-color) 25%,
+      var(--el-fill-color-light) 50%,
+      var(--el-fill-color) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 1.4s infinite;
   }
@@ -1069,7 +1073,11 @@ async function handleDeleteComment(comment: NoteComment) {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

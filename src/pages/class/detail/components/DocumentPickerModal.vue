@@ -1,12 +1,12 @@
 <script lang="ts" setup>
+import type { fileMeta } from "@/api/course/lesson"
 import type { CategoryResponse } from "@/api/document/category"
 import type { DocumentResponse } from "@/api/document/document"
-import type { fileMeta } from "@/api/course/lesson"
+import { formatFileSize, getFilePngIcon } from "@@/utils/fileIcon"
 import { ElMessage } from "element-plus"
 import { computed, ref, watch } from "vue"
 import { getAllCategories } from "@/api/document/category"
 import { getDocuments } from "@/api/document/document"
-import { formatFileSize, getFilePngIcon } from "@@/utils/fileIcon"
 
 const props = defineProps<{
   visible: boolean
@@ -15,16 +15,16 @@ const props = defineProps<{
   allowedExtensions?: string[] // 若设置，仅该扩展名的文件可被选取
 }>()
 
+const emit = defineEmits<{
+  (e: "update:visible", value: boolean): void
+  (e: "confirm", files: fileMeta[]): void
+}>()
+
 function isExtensionAllowed(filename: string) {
   if (!props.allowedExtensions || props.allowedExtensions.length === 0) return true
   const ext = filename.split(".").pop()?.toLowerCase() || ""
   return props.allowedExtensions.includes(ext)
 }
-
-const emit = defineEmits<{
-  (e: "update:visible", value: boolean): void
-  (e: "confirm", files: fileMeta[]): void
-}>()
 
 // ──────────── State ────────────
 const loading = ref(false)
@@ -107,8 +107,7 @@ async function loadDocuments() {
       documents.value = res.data.list
       total.value = res.data.total
     }
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
@@ -157,8 +156,7 @@ function toggleSelect(doc: DocumentResponse) {
   const key = doc.file.fullpath
   if (selectedMap.value.has(key)) {
     selectedMap.value.delete(key)
-  }
-  else {
+  } else {
     if (selectedCount.value >= props.limit) {
       ElMessage.warning(`最多还可选 ${props.limit} 个文件`)
       return
@@ -260,9 +258,13 @@ function handleClose() {
       >
         <!-- 文件夹 -->
         <template v-if="doc.type === 1">
-          <el-icon class="item-folder-icon"><Folder /></el-icon>
+          <el-icon class="item-folder-icon">
+            <Folder />
+          </el-icon>
           <span class="item-name">{{ doc.name }}</span>
-          <el-icon class="item-arrow"><ArrowRight /></el-icon>
+          <el-icon class="item-arrow">
+            <ArrowRight />
+          </el-icon>
         </template>
 
         <!-- 文件 -->

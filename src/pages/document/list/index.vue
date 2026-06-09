@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { ClassAuthorizationItem, LeaderAuthorizationItem, OrgAuthorizationItem, UserAuthorizationItem } from "@/api/document/authorization"
-import type { DocumentResponse, DocumentTreeNode } from "@/api/document/document"
+import type { DocumentResponse, DocumentTreeNode, TranscodeStatus } from "@/api/document/document"
 import fileExcelIcon from "@@/assets/images/file-excel-icon.png"
 import fileFolderIcon from "@@/assets/images/file-file-icon.png"
 import fileImgIcon from "@@/assets/images/file-img-icon.png"
@@ -19,7 +19,6 @@ import {
   getOrgAuthorizations,
   getUserAuthorizations
 } from "@/api/document/authorization"
-import type { TranscodeStatus } from "@/api/document/document"
 import {
   checkDuplicates,
   createFileRecord,
@@ -717,7 +716,9 @@ async function uploadNextFile() {
 
 // 上传文件并替换已有文档
 async function uploadSingleFileWithReplace(fileItem: UploadFileItem, existingDocId: number) {
-  const onProgress = (progress: number) => { fileItem.progress = progress }
+  const onProgress = (progress: number) => {
+    fileItem.progress = progress
+  }
 
   const onSuccess = async (fileId: number) => {
     try {
