@@ -329,6 +329,9 @@ function handleRegistrationChanged() {
                 <el-tag size="small" type="info">
                   排序 {{ row.sortOrder }}
                 </el-tag>
+                <el-tag size="small" type="info">
+                  ID {{ row.id }}
+                </el-tag>
               </div>
               <div class="activity-meta">
                 <span>分类：{{ row.categoryName || "-" }}</span>
