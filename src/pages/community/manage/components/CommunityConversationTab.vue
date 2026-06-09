@@ -350,6 +350,14 @@ async function openMemberDialog(conversation: ConversationModel) {
   }
 }
 
+function copyGroupId(id: number) {
+  navigator.clipboard.writeText(String(id)).then(() => {
+    ElMessage.success("群 ID 已复制")
+  }).catch(() => {
+    ElMessage.info(`群 ID：${id}`)
+  })
+}
+
 onMounted(() => {
   fetchConversations()
 })
@@ -420,6 +428,9 @@ watch(() => props.communityId, () => {
             <span class="meta-item">
               <el-icon><Calendar /></el-icon>
               {{ formatDateTime(conversation.createdAt * 1000).split(" ")[0] }}
+            </span>
+            <span class="meta-item meta-item--id meta-item--clickable" @click="copyGroupId(conversation.id)">
+              ID: {{ conversation.id }}
             </span>
           </div>
         </div>
@@ -776,6 +787,11 @@ watch(() => props.communityId, () => {
         background-color: var(--el-color-primary-light-9);
         color: var(--el-color-primary);
       }
+    }
+
+    &--id {
+      color: var(--el-text-color-placeholder);
+      font-size: 12px;
     }
   }
 }

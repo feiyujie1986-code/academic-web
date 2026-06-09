@@ -386,6 +386,9 @@ async function handleDeleteComment(comment: NoteComment) {
 
       <div class="table-wrapper">
         <el-table :data="tableData" style="width: 100%" row-key="id">
+          <!-- ID -->
+          <el-table-column label="ID" prop="id" width="80" />
+
           <!-- 标题 -->
           <el-table-column label="标题" width="200">
             <template #default="{ row }">
@@ -513,6 +516,9 @@ async function handleDeleteComment(comment: NoteComment) {
         <template v-if="drawerNote">
           <!-- 基本信息 -->
           <el-descriptions :column="2" border class="note-desc">
+            <el-descriptions-item label="ID">
+              {{ drawerNote.id }}
+            </el-descriptions-item>
             <el-descriptions-item label="标题" :span="2">
               {{ drawerNote.title }}
             </el-descriptions-item>
