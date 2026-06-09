@@ -286,6 +286,26 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: "/activity",
+    component: Layouts,
+    meta: { hidden: true },
+    redirect: "/activity/list",
+    children: [
+      {
+        path: "list",
+        component: () => import("@/pages/activity/list/index.vue"),
+        name: "ActivityList",
+        meta: { title: "活动列表" }
+      },
+      {
+        path: "category",
+        component: () => import("@/pages/activity/category/index.vue"),
+        name: "ActivityCategory",
+        meta: { title: "活动分类管理" }
+      }
+    ]
+  },
+  {
     path: "/notice",
     component: Layouts,
     meta: { hidden: true },
