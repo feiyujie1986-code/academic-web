@@ -397,7 +397,11 @@ async function handleSubmit(publishAfterSave = false) {
               fit="cover"
               class="preview-img"
               :preview-src-list="[formData.coverImage]"
-            />
+            >
+              <template #placeholder>
+                <div class="preview-img-skeleton" />
+              </template>
+            </el-image>
             <el-button type="danger" link @click="removeImage">
               移除
             </el-button>
@@ -530,6 +534,20 @@ async function handleSubmit(publishAfterSave = false) {
   height: 120px;
   border-radius: 6px;
   border: 1px solid var(--el-border-color);
+}
+
+.preview-img-skeleton {
+  width: 120px;
+  height: 120px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .upload-tip,
