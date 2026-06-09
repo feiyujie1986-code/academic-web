@@ -2,9 +2,12 @@
 import type { FormInstance, FormRules, UploadRequestOptions } from "element-plus"
 import type { ActivityFormParams, ActivityListItem } from "@/api/activity/activity"
 import type { ActivityCategoryItem } from "@/api/activity/category"
+import { QuillEditor } from "@vueup/vue-quill"
+import BlotFormatter from "quill-blot-formatter"
 import { ActivityStatus, addActivityApi, editActivityApi, updateActivityStatusApi } from "@/api/activity/activity"
 import { getAllCategoriesApi } from "@/api/activity/category"
-import { uploadFile } from "@/api/fileM/file"
+import { uploadFile, uploadImage } from "@/api/fileM/file"
+import "@vueup/vue-quill/dist/vue-quill.snow.css"
 
 interface Props {
   visible: boolean
@@ -60,6 +63,158 @@ function createDefaultFormData() {
 
 const formData = ref(createDefaultFormData())
 
+// ========== 富文本编辑器 ==========
+const quillEditorRef = ref<InstanceType<typeof QuillEditor> | null>(null)
+const quillEditorKey = ref(0)
+const isEditorFullscreen = ref(false)
+
+const editorToolbar = ref([
+  [{ header: [1, 2, 3, 4, 5, 6, false] }],
+  [{ color: [] }, { background: [] }],
+  ["bold", "italic", "underline", "strike"],
+  [{ list: "ordered" }, { list: "bullet" }],
+  ["image"],
+  ["link"]
+])
+
+const quillModules = {
+  name: "blotFormatter",
+  module: BlotFormatter,
+  options: {}
+}
+
+function isValidImageUrl(url: string): boolean {
+  if (!url || typeof url !== "string") return false
+  const lowerUrl = url.toLowerCase().trim()
+  const dangerousProtocols = ["javascript:", "data:", "vbscript:", "file:"]
+  if (dangerousProtocols.some(p => lowerUrl.startsWith(p))) return false
+  if (!lowerUrl.startsWith("http://") && !lowerUrl.startsWith("https://")) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
+function preloadImage(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve()
+    img.onerror = reject
+    img.src = url
+  })
+}
+
+function handleImageUpload() {
+  const input = document.createElement("input")
+  input.setAttribute("type", "file")
+  input.setAttribute("accept", "image/jpeg,image/png,image/gif,image/webp")
+  input.click()
+
+  input.onchange = async () => {
+    const file = input.files?.[0]
+    if (!file) return
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      ElMessage.error("请上传 JPG/PNG/GIF/WebP 格式的图片")
+      return
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      ElMessage.error("图片大小不能超过 50MB")
+      return
+    }
+
+    const quill = quillEditorRef.value?.getQuill()
+    if (!quill) return
+
+    const range = quill.getSelection(true)
+    const insertIndex = range.index
+
+    const editorContainer = quill.container as HTMLElement
+    const placeholder = document.createElement("div")
+    placeholder.className = "image-upload-overlay"
+    placeholder.innerHTML = `
+      <div class="placeholder-box">
+        <span class="placeholder-icon">📷</span>
+        <span class="placeholder-text">上传中......</span>
+        <span class="placeholder-progress">
+          <span class="placeholder-progress-bar" style="width: 0%"></span>
+        </span>
+      </div>
+    `
+    editorContainer.style.position = "relative"
+    editorContainer.appendChild(placeholder)
+    quill.disable()
+
+    const updateProgress = (percent: number) => {
+      const barEl = placeholder.querySelector(".placeholder-progress-bar") as HTMLElement
+      if (barEl) barEl.style.width = `${percent}%`
+    }
+    const removePlaceholder = () => {
+      if (placeholder.parentNode) placeholder.remove()
+    }
+
+    try {
+      const res = await uploadImage(file, updateProgress)
+      if (res.code === 0 && res.data?.fullpath) {
+        const imageUrl = res.data.fullpath
+        if (imageUrl.startsWith("r2")) {
+          removePlaceholder()
+          quill.enable()
+          ElMessage.error("图片插入失败")
+          return
+        }
+        if (!isValidImageUrl(imageUrl)) {
+          removePlaceholder()
+          quill.enable()
+          ElMessage.error("图片地址不合法")
+          return
+        }
+        try {
+          await preloadImage(imageUrl)
+        } catch { /* ignore */ }
+        removePlaceholder()
+        quill.enable()
+        quill.insertEmbed(insertIndex, "image", imageUrl)
+        quill.insertText(insertIndex + 1, "\n")
+        quill.setSelection(insertIndex + 2, 0)
+        ElMessage.success("图片上传成功")
+      } else {
+        removePlaceholder()
+        quill.enable()
+        ElMessage.error(res.msg || "图片上传失败")
+      }
+    } catch {
+      removePlaceholder()
+      quill.enable()
+      ElMessage.error("图片上传失败")
+    }
+  }
+}
+
+function onEditorReady(quill: any) {
+  const toolbar = quill.getModule("toolbar")
+  if (toolbar) toolbar.addHandler("image", handleImageUpload)
+  const editorContainer = quill.root
+  if (editorContainer) {
+    editorContainer.addEventListener("scroll", () => {
+      const blotFormatter = quill.getModule("blotFormatter") as any
+      if (blotFormatter && typeof blotFormatter.hide === "function") blotFormatter.hide()
+    })
+  }
+}
+
+function toggleEditorFullscreen() {
+  isEditorFullscreen.value = !isEditorFullscreen.value
+  const quill = quillEditorRef.value?.getQuill()
+  if (quill) {
+    const blotFormatter = quill.getModule("blotFormatter") as any
+    if (blotFormatter && typeof blotFormatter.hide === "function") blotFormatter.hide()
+  }
+}
+
 const formRules: FormRules = {
   title: [
     { required: true, message: "请输入活动名称", trigger: "blur" },
@@ -113,6 +268,7 @@ function removeImage() {
 function resetForm() {
   formData.value = createDefaultFormData()
   formRef.value?.clearValidate()
+  quillEditorKey.value += 1
 }
 
 watch(() => props.visible, (visible) => {
@@ -315,14 +471,24 @@ async function handleSubmit(publishAfterSave = false) {
       </el-form-item>
 
       <el-form-item label="活动详情" prop="description">
-        <el-input
-          v-model="formData.description"
-          type="textarea"
-          placeholder="选填，活动详细介绍"
-          :rows="5"
-          maxlength="5000"
-          show-word-limit
-        />
+        <div class="editor-wrapper" :class="isEditorFullscreen ? 'editor-wrapper-fullscreen' : ''">
+          <QuillEditor
+            ref="quillEditorRef"
+            :key="quillEditorKey"
+            theme="snow"
+            v-model:content="formData.description"
+            content-type="html"
+            :toolbar="editorToolbar"
+            :modules="[quillModules]"
+            @ready="onEditorReady"
+          />
+          <span class="zoom-action" @click="toggleEditorFullscreen">
+            <el-icon>
+              <zoom-out v-if="isEditorFullscreen" />
+              <zoom-in v-else />
+            </el-icon>
+          </span>
+        </div>
       </el-form-item>
     </el-form>
 
@@ -380,5 +546,126 @@ async function handleSubmit(publishAfterSave = false) {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+:deep(.ql-toolbar) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background-color: #fff;
+  border-bottom: 1px solid #ccc;
+}
+
+:deep(.ql-container) {
+  padding-top: 42px;
+}
+
+:deep(.ql-editor) {
+  height: 200px;
+  width: 100%;
+  border-radius: 4px;
+}
+
+.editor-wrapper {
+  position: relative;
+  overflow-y: hidden;
+  width: 100%;
+}
+
+.editor-wrapper-fullscreen {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: -300px;
+  width: 600px;
+  height: 100vh;
+  padding-bottom: 60px;
+  box-sizing: border-box;
+  z-index: 1000;
+  background-color: #fff;
+}
+
+.editor-wrapper-fullscreen :deep(.ql-editor) {
+  height: 100%;
+  width: 100%;
+}
+
+.zoom-action {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--el-text-color-regular);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background-color: var(--el-fill-color-light);
+  transition: all 0.3s;
+  z-index: 3;
+
+  &:hover {
+    color: var(--el-color-primary);
+    background-color: var(--el-color-primary-light-9);
+  }
+}
+
+:deep(.image-upload-overlay) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+  user-select: none;
+}
+
+:deep(.image-upload-overlay .placeholder-box) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 120px;
+  background-color: rgba(245, 247, 250, 0.95);
+  border: 1px dashed #dcdfe6;
+  border-radius: 4px;
+}
+
+:deep(.image-upload-overlay .placeholder-icon) {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+:deep(.image-upload-overlay .placeholder-text) {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+:deep(.image-upload-overlay .placeholder-progress) {
+  width: 80%;
+  height: 6px;
+  background-color: #e4e7ed;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+:deep(.image-upload-overlay .placeholder-progress-bar) {
+  height: 100%;
+  background-color: #409eff;
+  border-radius: 3px;
+  transition: width 0.2s ease;
 }
 </style>
