@@ -1,10 +1,6 @@
-<script lang="ts" setup>
-const VITE_APP_TITLE = import.meta.env.VITE_APP_TITLE
-</script>
-
 <template>
   <footer class="layout-footer">
-    MIT © 2026-PRESENT {{ VITE_APP_TITLE }}
+    MIT © 2026-PRESENT BTCircle
   </footer>
 </template>
 

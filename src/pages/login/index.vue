@@ -6,7 +6,6 @@ import { useRouter } from "vue-router"
 import { captcha } from "@/api/base/login"
 import { useUserStore } from "@/pinia/stores/user_n"
 
-const VITE_APP_TITLE = import.meta.env.VITE_APP_TITLE
 const router = useRouter()
 const loginFormRef = ref<FormInstance | null>(null)
 
@@ -153,7 +152,7 @@ createCode()
       </el-form>
     </div>
     <div class="footer">
-      <span>MIT © 2021-PRESENT {{ VITE_APP_TITLE }}  </span>
+      <span>MIT © 2021-PRESENT BTCircle  </span>
       <!-- <a href="https://github.com/pddzl/td27-admin" target="_blank">
         <img src="@@/assets/images/github.png" alt="github">
       </a> -->
