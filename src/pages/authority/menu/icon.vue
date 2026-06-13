@@ -22,6 +22,9 @@ const options = reactive([
   { key: "menu-community", label: "menu-community" },
   { key: "menu-notification", label: "menu-notification" },
   { key: "menu-settings", label: "menu-settings" },
+  { key: "menu-note", label: "menu-note" },
+  { key: "menu-banner", label: "menu-banner" },
+  { key: "menu-activity", label: "menu-activity" },
   { key: "dashboard", label: "dashboard" },
   { key: "setting", label: "setting" },
   { key: "lock", label: "lock" },
@@ -52,6 +55,9 @@ function getValidIconName(label: string) {
     "menu-community",
     "menu-notification",
     "menu-settings",
+    "menu-note",
+    "menu-banner",
+    "menu-activity",
     "search",
     "link",
     "load",
@@ -82,7 +88,7 @@ function getValidIconName(label: string) {
 // }
 
 function iconForOption(option: typeof options[0]) {
-  return computed(() => getValidIconName(option.label) as "menu-home" | "menu-class" | "menu-chat" | "menu-course" | "menu-member" | "menu-organization" | "menu-document" | "menu-feedback" | "menu-community" | "menu-notification" | "menu-settings" | "access" | "bug" | "config" | "dashboard" | "file" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "link" | "load" | "lock" | "menu" | "monitor" | "network" | "plus" | "search" | "setting")
+  return computed(() => getValidIconName(option.label) as "menu-home" | "menu-class" | "menu-chat" | "menu-course" | "menu-member" | "menu-organization" | "menu-document" | "menu-feedback" | "menu-community" | "menu-notification" | "menu-settings" | "menu-note" | "menu-banner" | "menu-activity" | "access" | "bug" | "config" | "dashboard" | "file" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "link" | "load" | "lock" | "menu" | "monitor" | "network" | "plus" | "search" | "setting")
 }
 </script>
 
