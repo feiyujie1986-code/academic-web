@@ -359,6 +359,15 @@ export function getConversationMessagesApi(conversationId: number, params: { bef
   })
 }
 
+// 发送群公告消息（触发 ejabberd 推送，成员可在消息 tab 看到）
+export function sendConversationAnnouncementApi(conversationId: number, content: string) {
+  return request<ApiResponseData<null>>({
+    url: `/v2/admin/im/conversations/${conversationId}/announcement`,
+    method: "post",
+    data: { content }
+  })
+}
+
 // 删除消息
 export function deleteConversationMessageApi(conversationId: number, messageId: string) {
   return request<ApiResponseData<null>>({

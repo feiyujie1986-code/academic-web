@@ -13,6 +13,7 @@ import {
   getConversationMessagesApi,
   muteMemberApi,
   removeConversationMemberApi,
+  sendConversationAnnouncementApi,
   unmuteMemberApi,
   updateConversationApi
 } from "@/api/im/conversation"
@@ -75,11 +76,11 @@ async function confirmAnnouncement() {
   }
   announcementLoading.value = true
   try {
-    const res = await updateConversationApi(conversationId, { announcement: announcementContent.value.trim() })
+    const res = await sendConversationAnnouncementApi(conversationId, announcementContent.value.trim())
     if (res.code === 0) {
-      if (conversation.value) conversation.value.announcement = announcementContent.value.trim()
       ElMessage.success("群公告已发送")
       announcementDialogVisible.value = false
+      fetchMessages()
     }
   } finally {
     announcementLoading.value = false
