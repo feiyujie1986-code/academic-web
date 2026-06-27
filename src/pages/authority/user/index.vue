@@ -10,6 +10,7 @@ import {
   deleteUserApi,
   editUserApi,
   getUsersApi,
+  resetPasswordApi,
   SwitchActiveApi
 } from "@/api/authority/user"
 
@@ -248,6 +249,27 @@ function editDialog(row: userListDataModel) {
   dialogVisible.value = true
 }
 
+// 重置密码
+function resetPasswordAction(row: userListDataModel) {
+  ElMessageBox.confirm(
+    `确认将「${row.nickname}」的密码重置为初始密码？`,
+    "重置密码",
+    {
+      confirmButtonText: "确认重置",
+      cancelButtonText: "取消",
+      type: "warning"
+    }
+  )
+    .then(() => {
+      resetPasswordApi({ id: row.id }).then((res) => {
+        if (res.code === 0) {
+          ElMessage({ type: "success", message: "密码已重置为初始密码" })
+        }
+      })
+    })
+    .catch(() => {})
+}
+
 // 切换用户状态
 function switchAction(id: number, active: boolean) {
   SwitchActiveApi({ id, active })
@@ -318,7 +340,7 @@ function switchAction(id: number, active: boolean) {
               />
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" align="center" width="180">
+          <el-table-column fixed="right" label="操作" align="center" width="240">
             <template #default="scope">
               <div style="white-space: nowrap">
                 <el-button
@@ -330,6 +352,16 @@ function switchAction(id: number, active: boolean) {
                   @click="editDialog(scope.row)"
                 >
                   编辑
+                </el-button>
+                <el-button
+                  type="warning"
+                  text
+                  icon="RefreshLeft"
+                  size="small"
+                  :disabled="scope.row.id === 1"
+                  @click="resetPasswordAction(scope.row)"
+                >
+                  重置密码
                 </el-button>
                 <el-button
                   type="danger"

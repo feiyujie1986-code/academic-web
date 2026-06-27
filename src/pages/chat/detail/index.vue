@@ -58,6 +58,34 @@ async function toggleMuteAll() {
   }
 }
 
+// ==================== 群公告 ====================
+const announcementDialogVisible = ref(false)
+const announcementContent = ref("")
+const announcementLoading = ref(false)
+
+function openAnnouncementDialog() {
+  announcementContent.value = conversation.value?.announcement ?? ""
+  announcementDialogVisible.value = true
+}
+
+async function confirmAnnouncement() {
+  if (!announcementContent.value.trim()) {
+    ElMessage.warning("公告内容不能为空")
+    return
+  }
+  announcementLoading.value = true
+  try {
+    const res = await updateConversationApi(conversationId, { announcement: announcementContent.value.trim() })
+    if (res.code === 0) {
+      if (conversation.value) conversation.value.announcement = announcementContent.value.trim()
+      ElMessage.success("群公告已发送")
+      announcementDialogVisible.value = false
+    }
+  } finally {
+    announcementLoading.value = false
+  }
+}
+
 // ==================== 解散群组 ====================
 const dissolveLoading = ref(false)
 
@@ -321,6 +349,9 @@ onMounted(async () => {
         </template>
       </div>
       <div v-if="conversation && conversation.status !== 3" class="header-actions">
+        <el-button size="small" type="primary" plain @click="openAnnouncementDialog">
+          发送群公告
+        </el-button>
         <el-button
           :type="conversation?.muteAll === 1 ? 'default' : 'warning'"
           size="small"
@@ -508,6 +539,26 @@ onMounted(async () => {
         </el-button>
         <el-button type="primary" :loading="muteLoading" @click="confirmMute">
           确认禁言
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 群公告弹窗 -->
+    <el-dialog v-model="announcementDialogVisible" title="发送群公告" width="480px">
+      <el-input
+        v-model="announcementContent"
+        type="textarea"
+        :rows="6"
+        placeholder="请输入群公告内容..."
+        maxlength="500"
+        show-word-limit
+      />
+      <template #footer>
+        <el-button @click="announcementDialogVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="announcementLoading" @click="confirmAnnouncement">
+          发送公告
         </el-button>
       </template>
     </el-dialog>

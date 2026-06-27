@@ -81,6 +81,15 @@ export function modifyPassApi(data: reqModifyPass & CId) {
   })
 }
 
+// 重置用户密码到初始密码
+export function resetPasswordApi(data: CId) {
+  return request<ApiResponseData<null>>({
+    url: "/v2/admin/users/reset-pass",
+    method: "post",
+    data
+  })
+}
+
 // 切换用户状态
 export function SwitchActiveApi(data: { active: boolean } & CId) {
   return request<ApiResponseData<null>>({
