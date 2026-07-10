@@ -262,6 +262,22 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: "/apppkg",
+    component: Layouts,
+    meta: { hidden: true },
+    redirect: "/apppkg/list",
+    children: [
+      {
+        path: "list",
+        component: () => import("@/pages/apppkg/list/index.vue"),
+        name: "AppPackageList",
+        meta: {
+          title: "App包列表"
+        }
+      }
+    ]
+  },
+  {
     path: "/chat",
     component: Layouts,
     meta: { hidden: true },

@@ -1,5 +1,5 @@
 import type { UploadFileInfo } from "@/api/fileM/direct"
-import type { StreamVideoInfo } from "@/api/fileM/multipart"
+import type { InitMultipartUploadReq, MultipartUploadInitRes, StreamVideoInfo } from "@/api/fileM/multipart"
 import SparkMD5 from "spark-md5"
 import { computed, ref } from "vue"
 import {
@@ -92,6 +92,9 @@ export interface CloudUploadOptions {
   onError?: (error: Error) => void
   // 视频上传完成后触发（transcodeStatus 初始为 "processing"，需轮询等待 "completed"）
   onVideoCreated?: (video: StreamVideoInfo) => void
+  // 自定义分片上传初始化函数，默认使用通用的 initMultipartUpload；
+  // 业务域若需要在初始化阶段附加专属校验（如限定文件大小上限），可传入自己的接口，返回结构需与 initMultipartUpload 一致
+  multipartInitFn?: (data: InitMultipartUploadReq) => Promise<ApiResponseData<MultipartUploadInitRes>>
 }
 
 // 获取断点存储 key
@@ -178,7 +181,7 @@ async function calculateFileMD5(
  * 云存储上传 Composable
  */
 export function useCloudUpload(options: CloudUploadOptions = {}) {
-  const { concurrency = 3, onProgress, onStatusChange, onSuccess, onError, onVideoCreated } = options
+  const { concurrency = 3, onProgress, onStatusChange, onSuccess, onError, onVideoCreated, multipartInitFn = initMultipartUpload } = options
 
   // 状态
   const status = ref<UploadStatus>("idle")
@@ -341,7 +344,7 @@ export function useCloudUpload(options: CloudUploadOptions = {}) {
       setStatus("initializing")
       setProgress(5)
 
-      const initRes = await initMultipartUpload({
+      const initRes = await multipartInitFn({
         fileName: file.name,
         fileSize: file.size,
         fileMd5,
