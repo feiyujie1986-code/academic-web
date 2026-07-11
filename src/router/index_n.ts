@@ -278,6 +278,22 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: "/sensitiveWord",
+    component: Layouts,
+    meta: { hidden: true },
+    redirect: "/sensitiveWord/list",
+    children: [
+      {
+        path: "list",
+        component: () => import("@/pages/sensitiveWord/list/index.vue"),
+        name: "SensitiveWordList",
+        meta: {
+          title: "敏感词列表"
+        }
+      }
+    ]
+  },
+  {
     path: "/chat",
     component: Layouts,
     meta: { hidden: true },
