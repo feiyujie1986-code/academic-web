@@ -23,6 +23,56 @@ export const activityStatusTagTypeMap: Record<number, string> = {
   [ActivityStatus.Ended]: "primary"
 }
 
+// 收费类型
+export enum ActivityFeeType {
+  Free = 0,
+  Paid = 1
+}
+
+export const feeTypeLabelMap: Record<number, string> = {
+  [ActivityFeeType.Free]: "免费",
+  [ActivityFeeType.Paid]: "收费"
+}
+
+// 报名方式
+export enum ParticipationType {
+  Individual = 1,
+  Family = 2
+}
+
+export const participationTypeLabelMap: Record<number, string> = {
+  [ParticipationType.Individual]: "个人",
+  [ParticipationType.Family]: "家庭"
+}
+
+// 报名支付状态
+export enum PayStatus {
+  NoPayNeeded = 0,
+  Pending = 1,
+  Paid = 2,
+  Refunding = 3,
+  Refunded = 4,
+  Expired = 5
+}
+
+export const payStatusLabelMap: Record<number, string> = {
+  [PayStatus.NoPayNeeded]: "无需支付",
+  [PayStatus.Pending]: "待支付",
+  [PayStatus.Paid]: "已支付",
+  [PayStatus.Refunding]: "退款中",
+  [PayStatus.Refunded]: "已退款",
+  [PayStatus.Expired]: "已超时"
+}
+
+export const payStatusTagTypeMap: Record<number, string> = {
+  [PayStatus.NoPayNeeded]: "info",
+  [PayStatus.Pending]: "warning",
+  [PayStatus.Paid]: "success",
+  [PayStatus.Refunding]: "warning",
+  [PayStatus.Refunded]: "info",
+  [PayStatus.Expired]: "info"
+}
+
 // ==================== 类型定义 ====================
 
 export interface ActivityListItem {
@@ -39,6 +89,7 @@ export interface ActivityListItem {
   registeredCount: number
   status: ActivityStatus
   sortOrder: number
+  feeType: ActivityFeeType
   createdAt: number
   updatedAt: number
 }
@@ -61,6 +112,7 @@ export interface ActivityFormParams {
   description?: string
   maxParticipants?: number
   sortOrder?: number
+  feeType?: ActivityFeeType
 }
 
 export interface ActivitySortItem {
@@ -68,16 +120,31 @@ export interface ActivitySortItem {
   sortOrder: number
 }
 
+// 报名参与人
+export interface ParticipantItem {
+  categoryId: number
+  categoryName: string
+  price: number
+  name: string
+}
+
 // 报名人员
 export interface RegistrationItem {
-  id: number
+  registrationId: number
   userId: number
   nickname: string
   avatar: string
   registeredAt: number
+  participationType: ParticipationType
+  totalFee: number
+  payStatus: PayStatus
+  participants: ParticipantItem[]
 }
 
-export type RegistrationListData = ListData<RegistrationItem[]>
+export interface RegistrationListData extends ListData<RegistrationItem[]> {
+  totalReceivable: number // 应收总额（分），基于活动全量数据聚合，不受分页影响
+  totalReceived: number // 已收总额（分），同上
+}
 
 // ==================== API 函数 ====================
 
@@ -143,10 +210,11 @@ export function getActivityRegistrationsApi(activityId: number, params: PageInfo
   })
 }
 
-/** 移除报名人员 */
-export function removeRegistrationApi(activityId: number, userId: number) {
-  return request<ApiResponseData<null>>({
-    url: `/v2/admin/activities/${activityId}/registrations/${userId}`,
-    method: "delete"
+/** 导出报名人员名单（CSV，由后端一次性生成全部有效报名，不受分页限制） */
+export function exportRegistrationsApi(activityId: number) {
+  return request({
+    url: `/v2/admin/activities/${activityId}/registrations/export`,
+    method: "get",
+    responseType: "blob"
   })
 }

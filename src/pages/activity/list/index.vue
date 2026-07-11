@@ -5,10 +5,12 @@ import { usePagination } from "@@/composables/usePagination_n"
 import { formatDateTime } from "@@/utils/datetime"
 import draggable from "vuedraggable"
 import {
+  ActivityFeeType,
   ActivityStatus,
   activityStatusLabelMap,
   activityStatusTagTypeMap,
   deleteActivityApi,
+  feeTypeLabelMap,
   getActivityListApi,
   sortActivitiesApi,
   updateActivityStatusApi
@@ -326,6 +328,9 @@ function handleRegistrationChanged() {
                 >
                   {{ activityStatusLabelMap[row.status] }}
                 </el-tag>
+                <el-tag size="small" :type="row.feeType === ActivityFeeType.Paid ? 'warning' : 'info'">
+                  {{ feeTypeLabelMap[row.feeType] }}
+                </el-tag>
                 <el-tag size="small" type="info">
                   排序 {{ row.sortOrder }}
                 </el-tag>
@@ -385,10 +390,14 @@ function handleRegistrationChanged() {
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item @click="handleEdit(row)">
+                    <el-dropdown-item
+                      v-if="row.status === ActivityStatus.Draft || row.status === ActivityStatus.Published"
+                      @click="handleEdit(row)"
+                    >
                       编辑
                     </el-dropdown-item>
                     <el-dropdown-item
+                      v-if="row.status !== ActivityStatus.Published"
                       :disabled="deleteLoading === row.id"
                       @click="handleDelete(row)"
                     >
@@ -433,6 +442,7 @@ function handleRegistrationChanged() {
       :activity-title="currentActivity?.title ?? ''"
       :max-participants="currentActivity?.maxParticipants ?? 0"
       :registered-count="currentActivity?.registeredCount ?? 0"
+      :fee-type="currentActivity?.feeType ?? ActivityFeeType.Free"
       @changed="handleRegistrationChanged"
     />
   </div>

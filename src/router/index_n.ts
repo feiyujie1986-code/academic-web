@@ -334,6 +334,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/activity/category/index.vue"),
         name: "ActivityCategory",
         meta: { title: "活动分类管理" }
+      },
+      {
+        path: "reconciliation",
+        component: () => import("@/pages/activity/reconciliation/index.vue"),
+        name: "ActivityReconciliation",
+        meta: { title: "报名对账" }
       }
     ]
   },

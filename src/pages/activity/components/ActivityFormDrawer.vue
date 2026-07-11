@@ -4,9 +4,10 @@ import type { ActivityFormParams, ActivityListItem } from "@/api/activity/activi
 import type { ActivityCategoryItem } from "@/api/activity/category"
 import { QuillEditor } from "@vueup/vue-quill"
 import BlotFormatter from "quill-blot-formatter"
-import { ActivityStatus, addActivityApi, editActivityApi, updateActivityStatusApi } from "@/api/activity/activity"
+import { ActivityFeeType, ActivityStatus, addActivityApi, editActivityApi, updateActivityStatusApi } from "@/api/activity/activity"
 import { getAllCategoriesApi } from "@/api/activity/category"
 import { uploadFile, uploadImage } from "@/api/fileM/file"
+import ActivityFeeCategoryTable from "./ActivityFeeCategoryTable.vue"
 import "@vueup/vue-quill/dist/vue-quill.snow.css"
 
 interface Props {
@@ -57,11 +58,18 @@ function createDefaultFormData() {
     endTime: undefined as number | undefined,
     description: "",
     maxParticipants: 0,
-    sortOrder: 0
+    sortOrder: 0,
+    feeType: ActivityFeeType.Free
   }
 }
 
 const formData = ref(createDefaultFormData())
+
+// 记录进入编辑态时的原始收费类型，用于"收费改免费"二次确认判断
+const originalFeeType = ref<ActivityFeeType>(ActivityFeeType.Free)
+
+// 收费类别子表格引用，用于发布前校验是否已配置类别
+const feeCategoryTableRef = ref<InstanceType<typeof ActivityFeeCategoryTable> | null>(null)
 
 // ========== 富文本编辑器 ==========
 const quillEditorRef = ref<InstanceType<typeof QuillEditor> | null>(null)
@@ -285,8 +293,10 @@ watch(() => props.visible, (visible) => {
       endTime: item.endTime || undefined,
       description: item.description || "",
       maxParticipants: item.maxParticipants,
-      sortOrder: item.sortOrder
+      sortOrder: item.sortOrder,
+      feeType: item.feeType
     }
+    originalFeeType.value = item.feeType
   } else {
     resetForm()
   }
@@ -302,6 +312,32 @@ const submitLoading = ref(false)
 
 async function handleSubmit(publishAfterSave = false) {
   if (!formRef.value) return
+
+  // 收费活动首次创建时还不能配置收费类别（需先保存后进入编辑态），此时不允许直接发布
+  if (publishAfterSave && !isEdit.value && formData.value.feeType === ActivityFeeType.Paid) {
+    ElMessage.warning("收费活动请先存为草稿，进入编辑后添加收费类别，再发布")
+    return
+  }
+  // 收费活动发布前必须已配置至少一个收费类别
+  if (publishAfterSave && isEdit.value && formData.value.feeType === ActivityFeeType.Paid) {
+    if (!feeCategoryTableRef.value?.hasCategories()) {
+      ElMessage.warning("收费活动请至少添加一个收费类别后再发布")
+      return
+    }
+  }
+  // 收费改免费，原有收费类别仍保留但不再生效，需二次确认
+  if (isEdit.value && originalFeeType.value === ActivityFeeType.Paid && formData.value.feeType === ActivityFeeType.Free) {
+    try {
+      await ElMessageBox.confirm(
+        "切换为免费后，原有收费类别仍保留但不再生效，确认切换？",
+        "确认切换",
+        { confirmButtonText: "确认", cancelButtonText: "取消", type: "warning" }
+      )
+    } catch {
+      return
+    }
+  }
+
   await formRef.value.validate(async (valid) => {
     if (!valid) return
 
@@ -314,7 +350,8 @@ async function handleSubmit(publishAfterSave = false) {
       endTime: formData.value.endTime ? Number(formData.value.endTime) : undefined,
       description: formData.value.description || undefined,
       maxParticipants: formData.value.maxParticipants,
-      sortOrder: formData.value.sortOrder
+      sortOrder: formData.value.sortOrder,
+      feeType: formData.value.feeType
     }
 
     submitLoading.value = true
@@ -472,6 +509,22 @@ async function handleSubmit(publishAfterSave = false) {
           controls-position="right"
         />
         <span class="form-tip">值越大越靠前</span>
+      </el-form-item>
+
+      <el-form-item label="收费类型" prop="feeType">
+        <el-radio-group v-model="formData.feeType">
+          <el-radio :value="ActivityFeeType.Free">
+            免费
+          </el-radio>
+          <el-radio :value="ActivityFeeType.Paid">
+            收费
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+
+      <el-form-item v-if="formData.feeType === ActivityFeeType.Paid" label="收费类别">
+        <ActivityFeeCategoryTable v-if="isEdit" ref="feeCategoryTableRef" :activity-id="editData!.id" />
+        <span v-else class="form-tip">请先存为草稿，进入编辑后再配置收费类别</span>
       </el-form-item>
 
       <el-form-item label="活动详情" prop="description">
