@@ -52,7 +52,8 @@ export enum PayStatus {
   Paid = 2,
   Refunding = 3,
   Refunded = 4,
-  Expired = 5
+  Expired = 5,
+  OfflinePending = 6
 }
 
 export const payStatusLabelMap: Record<number, string> = {
@@ -61,7 +62,8 @@ export const payStatusLabelMap: Record<number, string> = {
   [PayStatus.Paid]: "已支付",
   [PayStatus.Refunding]: "退款中",
   [PayStatus.Refunded]: "已退款",
-  [PayStatus.Expired]: "已超时"
+  [PayStatus.Expired]: "已超时",
+  [PayStatus.OfflinePending]: "待线下付款"
 }
 
 export const payStatusTagTypeMap: Record<number, string> = {
@@ -70,7 +72,8 @@ export const payStatusTagTypeMap: Record<number, string> = {
   [PayStatus.Paid]: "success",
   [PayStatus.Refunding]: "warning",
   [PayStatus.Refunded]: "info",
-  [PayStatus.Expired]: "info"
+  [PayStatus.Expired]: "info",
+  [PayStatus.OfflinePending]: "primary"
 }
 
 // ==================== 类型定义 ====================
@@ -90,6 +93,7 @@ export interface ActivityListItem {
   status: ActivityStatus
   sortOrder: number
   feeType: ActivityFeeType
+  onlinePaymentEnabled: boolean
   createdAt: number
   updatedAt: number
 }
@@ -113,6 +117,7 @@ export interface ActivityFormParams {
   maxParticipants?: number
   sortOrder?: number
   feeType?: ActivityFeeType
+  onlinePaymentEnabled?: boolean
 }
 
 export interface ActivitySortItem {

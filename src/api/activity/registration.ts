@@ -17,3 +17,11 @@ export function forceRemoveRegistrationApi(registrationId: number, reason?: stri
     data: { reason }
   })
 }
+
+// 确认线下付款收款：将待线下付款（payStatus=6）的报名标记为已支付，仅记录线下已发生的收款动作，不可撤销
+export function confirmOfflinePaymentApi(registrationId: number) {
+  return request<ApiResponseData<null>>({
+    url: `/v2/admin/activity-registrations/${registrationId}/confirm-offline-payment`,
+    method: "post"
+  })
+}

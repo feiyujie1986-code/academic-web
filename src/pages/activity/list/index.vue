@@ -331,6 +331,9 @@ function handleRegistrationChanged() {
                 <el-tag size="small" :type="row.feeType === ActivityFeeType.Paid ? 'warning' : 'info'">
                   {{ feeTypeLabelMap[row.feeType] }}
                 </el-tag>
+                <el-tag v-if="row.feeType === ActivityFeeType.Paid && !row.onlinePaymentEnabled" size="small" type="danger">
+                  已关闭线上支付
+                </el-tag>
                 <el-tag size="small" type="info">
                   排序 {{ row.sortOrder }}
                 </el-tag>

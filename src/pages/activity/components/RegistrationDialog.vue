@@ -12,7 +12,7 @@ import {
   payStatusLabelMap,
   payStatusTagTypeMap
 } from "@/api/activity/activity"
-import { forceRemoveRegistrationApi, refundRegistrationApi } from "@/api/activity/registration"
+import { confirmOfflinePaymentApi, forceRemoveRegistrationApi, refundRegistrationApi } from "@/api/activity/registration"
 
 interface Props {
   visible: boolean
@@ -89,12 +89,21 @@ function handleCurrentChange(value: number) {
 }
 
 // ========== 操作类型判断 ==========
-type RowAction = "remove" | "refund" | "none"
+// 审核退款：仅用于处理用户已提交的退款申请（退款中）
+// 确认收款：仅用于待线下付款的报名，与"移除"同时展示
+// 移除：管理员主动移除任意有效报名，与"审核退款"互斥展示
+function canRefund(row: RegistrationItem): boolean {
+  return row.payStatus === PayStatus.Refunding
+}
 
-function getRowAction(row: RegistrationItem): RowAction {
-  if (row.payStatus === PayStatus.Refunding) return "refund"
-  if (row.payStatus === PayStatus.Refunded || row.payStatus === PayStatus.Expired) return "none"
-  return "remove"
+function canConfirmOffline(row: RegistrationItem): boolean {
+  return row.payStatus === PayStatus.OfflinePending
+}
+
+function canRemove(row: RegistrationItem): boolean {
+  return row.payStatus !== PayStatus.Refunding
+    && row.payStatus !== PayStatus.Refunded
+    && row.payStatus !== PayStatus.Expired
 }
 
 // ========== 强制移除 ==========
@@ -153,6 +162,34 @@ async function confirmRefund() {
     console.error(error)
   } finally {
     refundLoading.value = false
+  }
+}
+
+// ========== 确认线下付款收款 ==========
+const confirmOfflineDialogVisible = ref(false)
+const confirmOfflineTargetRow = ref<RegistrationItem | null>(null)
+const confirmOfflineLoading = ref(false)
+
+function handleOpenConfirmOffline(row: RegistrationItem) {
+  confirmOfflineTargetRow.value = row
+  confirmOfflineDialogVisible.value = true
+}
+
+async function confirmOfflinePayment() {
+  if (!confirmOfflineTargetRow.value) return
+  confirmOfflineLoading.value = true
+  try {
+    const res = await confirmOfflinePaymentApi(confirmOfflineTargetRow.value.registrationId)
+    if (res.code === 0) {
+      ElMessage.success("已确认收款")
+      confirmOfflineDialogVisible.value = false
+      getTableData()
+      emit("changed")
+    }
+  } catch (error) {
+    console.error(error)
+  } finally {
+    confirmOfflineLoading.value = false
   }
 }
 
@@ -242,10 +279,18 @@ async function handleExport() {
           {{ formatDateTime(row.registeredAt * 1000) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="100" align="center">
+      <el-table-column label="操作" width="150" align="center">
         <template #default="{ row }">
           <el-button
-            v-if="getRowAction(row) === 'remove'"
+            v-if="canConfirmOffline(row)"
+            type="success"
+            link
+            @click="handleOpenConfirmOffline(row)"
+          >
+            确认收款
+          </el-button>
+          <el-button
+            v-if="canRemove(row)"
             type="danger"
             link
             :loading="removeLoading === row.registrationId"
@@ -254,7 +299,7 @@ async function handleExport() {
             移除
           </el-button>
           <el-button
-            v-else-if="getRowAction(row) === 'refund'"
+            v-if="canRefund(row)"
             type="warning"
             link
             @click="handleOpenRefund(row)"
@@ -310,6 +355,31 @@ async function handleExport() {
       </el-button>
       <el-button type="primary" :loading="refundLoading" @click="confirmRefund">
         确认退款
+      </el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 确认线下付款收款 -->
+  <el-dialog
+    v-model="confirmOfflineDialogVisible"
+    :title="`确认收款 - ${confirmOfflineTargetRow?.nickname ?? ''}`"
+    width="420px"
+    :close-on-click-modal="false"
+    append-to-body
+  >
+    <div class="refund-info">
+      <div>报名方式：{{ confirmOfflineTargetRow ? participationTypeLabelMap[confirmOfflineTargetRow.participationType] : "" }}</div>
+      <div>应付金额：¥{{ confirmOfflineTargetRow ? formatMoney(confirmOfflineTargetRow.totalFee) : "0.00" }}</div>
+    </div>
+    <div class="refund-warning">
+      请确认已线下收到该用户的付款，确认后无法撤销，如需撤销请改用「移除」并让用户重新报名
+    </div>
+    <template #footer>
+      <el-button @click="confirmOfflineDialogVisible = false">
+        取消
+      </el-button>
+      <el-button type="primary" :loading="confirmOfflineLoading" @click="confirmOfflinePayment">
+        确认收款
       </el-button>
     </template>
   </el-dialog>

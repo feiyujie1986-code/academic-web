@@ -59,7 +59,8 @@ function createDefaultFormData() {
     description: "",
     maxParticipants: 0,
     sortOrder: 0,
-    feeType: ActivityFeeType.Free
+    feeType: ActivityFeeType.Free,
+    onlinePaymentEnabled: true
   }
 }
 
@@ -294,7 +295,8 @@ watch(() => props.visible, (visible) => {
       description: item.description || "",
       maxParticipants: item.maxParticipants,
       sortOrder: item.sortOrder,
-      feeType: item.feeType
+      feeType: item.feeType,
+      onlinePaymentEnabled: item.onlinePaymentEnabled ?? true
     }
     originalFeeType.value = item.feeType
   } else {
@@ -351,7 +353,8 @@ async function handleSubmit(publishAfterSave = false) {
       description: formData.value.description || undefined,
       maxParticipants: formData.value.maxParticipants,
       sortOrder: formData.value.sortOrder,
-      feeType: formData.value.feeType
+      feeType: formData.value.feeType,
+      onlinePaymentEnabled: formData.value.feeType === ActivityFeeType.Paid ? formData.value.onlinePaymentEnabled : undefined
     }
 
     submitLoading.value = true
@@ -527,6 +530,15 @@ async function handleSubmit(publishAfterSave = false) {
         <span v-else class="form-tip">请先存为草稿，进入编辑后再配置收费类别</span>
       </el-form-item>
 
+      <el-form-item v-if="formData.feeType === ActivityFeeType.Paid" label="线上支付">
+        <div class="online-payment-switch">
+          <el-switch v-model="formData.onlinePaymentEnabled" active-text="允许线上支付" />
+          <div class="form-tip">
+            关闭后该活动的报名只能选「线下付款」，App 端不再展示微信支付/支付宝选项；仅影响之后新提交的报名，不影响已有的线上待支付/已支付记录
+          </div>
+        </div>
+      </el-form-item>
+
       <el-form-item label="活动详情" prop="description">
         <div class="editor-wrapper" :class="isEditorFullscreen ? 'editor-wrapper-fullscreen' : ''">
           <QuillEditor
@@ -615,6 +627,16 @@ async function handleSubmit(publishAfterSave = false) {
 
 .form-tip {
   margin-left: 12px;
+}
+
+.online-payment-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .form-tip {
+    margin-left: 0;
+  }
 }
 
 .drawer-footer {
