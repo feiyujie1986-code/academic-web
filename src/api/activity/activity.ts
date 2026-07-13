@@ -87,6 +87,8 @@ export interface ActivityListItem {
   location: string
   startTime: number
   endTime: number
+  startTimeStr: string // 北京时间可读格式 "2006-01-02 15:04:05"
+  endTimeStr: string // 北京时间可读格式
   description: string
   maxParticipants: number
   registeredCount: number
@@ -111,8 +113,8 @@ export interface ActivityFormParams {
   categoryId: number
   coverImage: string
   location?: string
-  startTime: number
-  endTime?: number
+  startTime: string // 格式 "2006-01-02 15:04:05"，北京时间
+  endTime?: string // 格式同上
   description?: string
   maxParticipants?: number
   sortOrder?: number

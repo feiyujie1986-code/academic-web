@@ -54,8 +54,8 @@ function createDefaultFormData() {
     categoryId: undefined as number | undefined,
     coverImage: "",
     location: "",
-    startTime: undefined as number | undefined,
-    endTime: undefined as number | undefined,
+    startTime: undefined as string | undefined,
+    endTime: undefined as string | undefined,
     description: "",
     maxParticipants: 0,
     sortOrder: 0,
@@ -290,8 +290,8 @@ watch(() => props.visible, (visible) => {
       categoryId: item.categoryId,
       coverImage: item.coverImage || "",
       location: item.location || "",
-      startTime: item.startTime || undefined,
-      endTime: item.endTime || undefined,
+      startTime: item.startTimeStr || undefined,
+      endTime: item.endTimeStr || undefined,
       description: item.description || "",
       maxParticipants: item.maxParticipants,
       sortOrder: item.sortOrder,
@@ -348,8 +348,8 @@ async function handleSubmit(publishAfterSave = false) {
       categoryId: formData.value.categoryId!,
       coverImage: formData.value.coverImage,
       location: formData.value.location || undefined,
-      startTime: Number(formData.value.startTime!),
-      endTime: formData.value.endTime ? Number(formData.value.endTime) : undefined,
+      startTime: formData.value.startTime!,
+      endTime: formData.value.endTime || undefined,
       description: formData.value.description || undefined,
       maxParticipants: formData.value.maxParticipants,
       sortOrder: formData.value.sortOrder,
@@ -479,7 +479,7 @@ async function handleSubmit(publishAfterSave = false) {
           v-model="formData.startTime"
           type="datetime"
           placeholder="请选择开始时间"
-          value-format="X"
+          value-format="YYYY-MM-DD HH:mm:ss"
           style="width: 100%"
         />
       </el-form-item>
@@ -489,7 +489,7 @@ async function handleSubmit(publishAfterSave = false) {
           v-model="formData.endTime"
           type="datetime"
           placeholder="选填，不设置则不限制结束时间"
-          value-format="X"
+          value-format="YYYY-MM-DD HH:mm:ss"
           style="width: 100%"
         />
       </el-form-item>
