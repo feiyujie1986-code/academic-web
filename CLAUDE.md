@@ -143,6 +143,16 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - 使用 `@@/utils/datetime` 中的 `formatDateTime()` 函数处理时间显示
 - 涉及到新增，编辑，提交等交互考虑弱网情况下loading
 
+## 角色数据权限约定（资料中心 resource_admin）
+
+系统的角色权限只有「角色 → 菜单 → API 接口」三层白名单，**没有通用的数据级/行级权限字段**。若需要"仅本人数据"这类限制，后端沿用 course/teachingfeedback 模块的既有惯例：靠角色的 `identity` 字符串在业务代码里做精确匹配判断，而不是加一个通用 dataScope 字段。
+
+资料中心已落地的例子：内置角色标识 `resource_admin`（字符串必须精确匹配，无下拉/校验兜底，填错则默认不受限）。命中该角色（且不是 super_admin/admin）时，后端会将资料的增删改（重命名/移动/删除/权限管理）限制在 `created_by === 当前用户`，越权返回错误码 606008，前端 `axios_n.ts` 拦截器会自动用 `apiData.msg` 弹出提示，**不需要前端为该错误码单独写处理逻辑**。
+
+Web 端创建此类账号步骤：「角色管理」新增角色 → identity 精确填写 `resource_admin` → 角色菜单只勾选"资料中心" → 角色接口只勾选资料相关接口 → 「用户管理」新建账号绑定该角色。
+
+已知边界（未处理）：文件夹树 `GetTree`/`GetFolderTree` 未按 created_by 过滤（保留完整目录树方便选择移动目标）；删除文件夹只校验文件夹本身创建人，不逐一校验子项；`created_by` 无索引，资料量大时列表过滤可能需要加索引。
+
 # 代码复用
 
 **IMPORTANT: 禁止重复实现已有功能**

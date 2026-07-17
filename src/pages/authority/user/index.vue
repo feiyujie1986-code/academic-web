@@ -208,9 +208,7 @@ async function getRoleOption() {
   const res = await getRolesApi()
   if (res.code === 0) {
     res.data.forEach((element) => {
-      if (["超级管理员", "牧长"].includes(element.roleName)) {
-        roleOptions.push({ ID: String(element.id), roleName: element.roleName })
-      }
+      roleOptions.push({ ID: String(element.id), roleName: element.roleName })
     })
   }
 }
