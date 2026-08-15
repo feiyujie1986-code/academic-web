@@ -92,7 +92,8 @@ export function createAppPackageApi(data: AppPackageFormParams) {
   return request<ApiResponseData<AppPackageItem>>({
     url: "/v2/admin/app-packages",
     method: "post",
-    data
+    data,
+    timeout: 30000
   })
 }
 

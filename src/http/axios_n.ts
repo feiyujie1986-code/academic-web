@@ -6,6 +6,12 @@ import { useUserStore } from "@/pinia/stores/user_n"
 /** 最大重试次数 */
 const MAX_RETRY_COUNT = 3
 
+/** 仅对幂等请求执行自动重试，避免 POST 等请求被重复提交 */
+function isIdempotentRequest(config: AxiosRequestConfig): boolean {
+  const method = config.method?.toLowerCase() || "get"
+  return ["get", "head", "options", "put", "delete"].includes(method)
+}
+
 /** 退出登录并强制刷新页面（会重定向到登录页） */
 function logout() {
   useUserStore().logout()
@@ -99,7 +105,7 @@ function createInstance() {
       const isTimeout = isTimeoutError(error)
 
       // 超时自动重试逻辑
-      if (isTimeout && config) {
+      if (isTimeout && config && isIdempotentRequest(config)) {
         const retryCount = config.__retryCount || 0
 
         // 未达到最大重试次数，自动重试
