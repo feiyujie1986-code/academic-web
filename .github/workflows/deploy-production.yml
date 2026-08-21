@@ -29,6 +29,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Configure pnpm network
+        run: |
+          pnpm config set fetch-retries 5
+          pnpm config set fetch-retry-mintimeout 10000
+          pnpm config set fetch-retry-maxtimeout 120000
+          pnpm config set fetch-timeout 120000
+          pnpm config set network-concurrency 8
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
