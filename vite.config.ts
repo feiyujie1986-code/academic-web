@@ -57,6 +57,9 @@ export default defineConfig(({ mode }) => {
     },
     // 构建配置
     build: {
+      // 低内存 Runner 上 staging 压缩会在 chunk 渲染阶段产生较高的内存峰值
+      minify: mode === "staging" ? false : "esbuild",
+      cssMinify: mode === "staging" ? false : "esbuild",
       // 自定义底层的 Rollup 打包配置
       rollupOptions: {
         output: {
