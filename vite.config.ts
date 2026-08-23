@@ -95,8 +95,8 @@ export default defineConfig(({ mode }) => {
     },
     // CSS 相关配置
     css: {
-      // 线程中运行 CSS 预处理器
-      preprocessorMaxWorkers: true
+      // 构建时禁用 CSS 预处理并行，避免低内存 Runner 因峰值占用触发 OOM
+      preprocessorMaxWorkers: mode === "development" ? true : 0
     },
     // 插件配置
     plugins: [
