@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { ClassAuthorizationItem, LeaderAuthorizationItem, OrgAuthorizationItem } from "@/api/document/authorization"
 import type { DocumentResponse, DocumentTreeNode, TranscodeStatus } from "@/api/document/document"
+import fileEpubIcon from "@@/assets/icons/preserve-color/file-epub.svg?url"
 import fileExcelIcon from "@@/assets/images/file-excel-icon.png"
 import fileFolderIcon from "@@/assets/images/file-file-icon.png"
 import fileImgIcon from "@@/assets/images/file-img-icon.png"
@@ -75,6 +76,7 @@ function getFilePngIcon(filename: string): string | null {
   if (["doc", "docx"].includes(ext)) return fileWordIcon
   if (["ppt", "pptx"].includes(ext)) return filePptIcon
   if (ext === "pdf") return filePdfIcon
+  if (ext === "epub") return fileEpubIcon
   if (["txt", "rtf"].includes(ext)) return fileTextIcon
   if (["mp3", "wav", "m4a"].includes(ext)) return fileMp3Icon
   if (["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm", "m4v"].includes(ext)) return fileMp4Icon
@@ -90,7 +92,6 @@ function getFileIconSvgName(item: DocumentResponse): string {
   if (["xls", "xlsx", "csv"].includes(ext)) return "file-excel"
   if (["ppt", "pptx"].includes(ext)) return "file-ppt"
   if (ext === "pdf") return "file-pdf"
-  if (ext === "epub") return "preserve-color/file-epub"
   if (["txt", "rtf"].includes(ext)) return "file-txt"
   if (["mp3", "wav", "m4a"].includes(ext)) return "file-mp3"
   if (["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm", "m4v"].includes(ext)) return "file-video"
@@ -232,7 +233,6 @@ function getUploadFileIconSvgName(filename: string): string {
   if (["xls", "xlsx", "csv"].includes(ext)) return "file-excel"
   if (["ppt", "pptx"].includes(ext)) return "file-ppt"
   if (ext === "pdf") return "file-pdf"
-  if (ext === "epub") return "preserve-color/file-epub"
   if (["txt", "rtf"].includes(ext)) return "file-txt"
   if (["mp3", "wav", "m4a"].includes(ext)) return "file-mp3"
   if (["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm", "m4v"].includes(ext)) return "file-video"
