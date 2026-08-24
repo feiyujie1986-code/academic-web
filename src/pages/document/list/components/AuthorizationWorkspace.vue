@@ -89,6 +89,17 @@ const taskPercentage = computed(() => {
 })
 const terminalStatuses = new Set(["completed", "failed", "conflict"])
 
+function createIdempotencyKey() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID()
+
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0F) | 0x40
+  bytes[8] = (bytes[8] & 0x3F) | 0x80
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0"))
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`
+}
+
 function normalizedFilter(): AuthorizationFilter {
   const parseIds = (value: string) => value.split(",")
     .map(item => Number(item.trim()))
@@ -275,7 +286,7 @@ async function confirmExplicitAction(operation: AuthorizationOperation, rows: Au
     const res = await executeAuthorizationAction(props.documentId, {
       operation: actualOperation,
       userIds,
-      idempotencyKey: crypto.randomUUID()
+      idempotencyKey: createIdempotencyKey()
     })
     actionResult.value = res.data
     resultVisible.value = true
@@ -316,7 +327,7 @@ async function confirmPreview() {
     const res = await createAuthorizationOperation(props.documentId, {
       previewToken: preview.value.previewToken,
       expectedRevision: preview.value.authorizationRevision,
-      idempotencyKey: crypto.randomUUID()
+      idempotencyKey: createIdempotencyKey()
     })
     activeTask.value = res.data
     previewVisible.value = false
@@ -387,7 +398,7 @@ async function retryFailures() {
     await fetchList()
     const res = await retryAuthorizationOperation(props.documentId, activeTask.value.operationId, {
       expectedRevision: authorizationRevision.value,
-      idempotencyKey: crypto.randomUUID()
+      idempotencyKey: createIdempotencyKey()
     })
     activeTask.value = res.data
     resultVisible.value = false
